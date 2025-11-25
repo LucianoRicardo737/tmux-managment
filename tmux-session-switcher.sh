@@ -286,12 +286,30 @@ switch_with_fzf_hierarchical() {
     # Use installed fzf if available, otherwise use system fzf
     [[ -x "$FZF_BIN" ]] && local FZF_CMD="$FZF_BIN" || local FZF_CMD="fzf"
 
-    # Get sessions
-    local sessions=$(tmux list-sessions -F "#{session_name}|#{session_windows}|#{session_attached}" 2>/dev/null | sort)
+    # Get sessions - sorted alphabetically
+    local all_sessions=$(tmux list-sessions -F "#{session_name}|#{session_windows}|#{session_attached}" 2>/dev/null | sort)
 
-    if [ -z "$sessions" ]; then
+    if [ -z "$all_sessions" ]; then
         tmux display-message "No sessions found"
         return 1
+    fi
+
+    # Reorder: current session first, then rest alphabetically
+    local sessions=""
+    if [[ -n "$current_session" ]]; then
+        # Get current session line
+        local current_line=$(echo "$all_sessions" | grep "^${current_session}|")
+        # Get other sessions (excluding current)
+        local other_sessions=$(echo "$all_sessions" | grep -v "^${current_session}|")
+        # Combine: current first, then others
+        if [[ -n "$current_line" ]]; then
+            sessions="$current_line"
+            [[ -n "$other_sessions" ]] && sessions="${sessions}\n${other_sessions}"
+        else
+            sessions="$all_sessions"
+        fi
+    else
+        sessions="$all_sessions"
     fi
 
     # Build hierarchical list: sessions with windows indented below
@@ -308,7 +326,8 @@ switch_with_fzf_hierarchical() {
 
         # Windows under this session (4 fields)
         local win_list=$(tmux list-windows -t "$name" -F "#{window_index}|#{window_name}|#{window_panes}|#{window_active}" 2>/dev/null)
-        while IFS='|' read -r idx wname panes active; do
+        # Only process windows if we have data
+        [[ -n "$win_list" ]] && while IFS='|' read -r idx wname panes active; do
             local wmarker="  "
             [ "$active" = "1" ] && wmarker="${GREEN}✓${RESET} "
             formatted+="WINDOW::${name}::${idx}::  ${wmarker}[${idx}] ${wname} ${DIM}(${panes}p)${RESET}\n"
