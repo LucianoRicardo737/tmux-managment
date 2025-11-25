@@ -1,0 +1,134 @@
+# tmux-sessionizer configuration file
+# Location: ~/.config/tmux-sessionizer/tmux-sessionizer.conf
+
+# ==============================================================================
+# SEARCH PATHS - Directories to search for projects
+# ==============================================================================
+
+# If set, this overrides the default TS_SEARCH_PATHS
+# Default: (~/ ~/personal ~/personal/dev/env/.config)
+TS_SEARCH_PATHS=(
+    ~/
+    ~/projects
+    ~/work
+)
+
+# Add additional search paths to TS_SEARCH_PATHS
+# Format: "path:depth" where depth is the max directory depth to search
+# If no depth is specified, TS_MAX_DEPTH (or 1) is used
+TS_EXTRA_SEARCH_PATHS=(
+    ~/github:3
+    ~/git:3
+    ~/.config:2
+    ~/Documents/dev:2
+)
+
+# Maximum depth for directory searches (default: 1)
+TS_MAX_DEPTH=2
+
+# ==============================================================================
+# SESSION COMMANDS - Configurable commands for sessions
+# ==============================================================================
+
+# Commands that can be executed in dedicated windows or splits
+# Access with: tmux-session-switcher -s <index>
+# Windows are created at index 69+ to avoid conflicts
+# Splits are cached and reused across sessions
+
+TS_SESSION_COMMANDS=(
+    "htop"                          # 0: System monitor
+    "nvim ~/notes.md"               # 1: Quick notes
+    "python3"                       # 2: Python REPL
+    "lazygit"                       # 3: Git TUI
+    "docker ps -a"                  # 4: Docker status
+)
+
+# Examples of usage:
+# tmux-session-switcher -s 0              # Opens htop in window 69
+# tmux-session-switcher -s 1 --vsplit    # Opens nvim in vertical split (cached)
+# tmux-session-switcher -s 3 --hsplit    # Opens lazygit in horizontal split (cached)
+
+# ==============================================================================
+# LOGGING - Debug and troubleshooting
+# ==============================================================================
+
+# Enable logging: "true", "echo", "file", or leave empty/unset to disable
+# - "echo": Print logs to stdout
+# - "file": Write logs to TS_LOG_FILE
+# TS_LOG="file"
+
+# Log file location (default: ~/.local/share/tmux-sessionizer/tmux-sessionizer.logs)
+# TS_LOG_FILE="$HOME/.local/share/tmux-sessionizer/tmux-sessionizer.logs"
+
+# ==============================================================================
+# HYDRATION SCRIPTS
+# ==============================================================================
+
+# When creating a new session from a directory, the script looks for:
+# 1. $PROJECT_DIR/.tmux-sessionizer (project-specific)
+# 2. $HOME/.tmux-sessionizer (global default)
+#
+# These scripts are sourced in the new session and can set up:
+# - Additional windows
+# - Custom pane layouts
+# - Environment variables
+# - Auto-start commands
+
+# Example ~/.tmux-sessionizer:
+# #!/bin/bash
+# tmux rename-window "editor"
+# tmux send-keys "nvim ." C-m
+# tmux new-window -n "server"
+# tmux send-keys "npm run dev" C-m
+# tmux new-window -n "shell"
+# tmux select-window -t 1
+
+# ==============================================================================
+# EXAMPLES
+# ==============================================================================
+
+# Minimal configuration:
+# TS_SEARCH_PATHS=(~/ ~/projects)
+
+# Developer configuration:
+# TS_SEARCH_PATHS=(~/)
+# TS_EXTRA_SEARCH_PATHS=(~/github:3 ~/gitlab:3 ~/.config:2)
+# TS_MAX_DEPTH=2
+# TS_SESSION_COMMANDS=(
+#     "htop"
+#     "nvim ~/TODO.md"
+#     "lazygit"
+#     "docker ps -a && docker logs -f \$(docker ps -q | head -1)"
+#     "k9s"
+# )
+# TS_LOG="file"
+
+# ==============================================================================
+# KEYBINDINGS (set in ~/.tmux.conf)
+# ==============================================================================
+
+# Recommended keybindings for ~/.tmux.conf:
+#
+# # Popup switcher (Alt+Tab style)
+# bind -n M-Tab run-shell "tmux-session-switcher popup"
+#
+# # FZF selector (Alt+S)
+# bind -n M-s run-shell "tmux-session-switcher fzf"
+#
+# # Search and create from directories (Alt+D)
+# bind -n M-d run-shell "tmux-session-switcher search"
+#
+# # Cycle sessions (Alt+N / Alt+P)
+# bind -n M-n run-shell "tmux-session-switcher next"
+# bind -n M-p run-shell "tmux-session-switcher prev"
+#
+# # Alternative binding (Ctrl+B then S)
+# bind s run-shell "tmux-session-switcher popup"
+#
+# # Session commands (example: Ctrl+B then W for window menu)
+# bind w display-menu -T "Session Commands" \
+#     "Monitor (htop)"     0 "run-shell 'tmux-session-switcher -s 0'" \
+#     "Notes"              1 "run-shell 'tmux-session-switcher -s 1 --vsplit'" \
+#     "Python REPL"        2 "run-shell 'tmux-session-switcher -s 2 --hsplit'" \
+#     "Git (lazygit)"      3 "run-shell 'tmux-session-switcher -s 3'" \
+#     "Docker"             4 "run-shell 'tmux-session-switcher -s 4'"

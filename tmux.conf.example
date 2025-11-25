@@ -1,0 +1,261 @@
+# ============================================
+# tmux Session Switcher v2.0 - Example Configuration
+# Con integración de tmux-sessionizer
+# ============================================
+#
+# Este archivo contiene configuraciones de ejemplo para usar el
+# tmux session switcher con todas las nuevas funcionalidades.
+# Copia las líneas que necesites a tu ~/.tmux.conf
+#
+# IMPORTANTE: Ajusta la ruta del script según donde lo hayas instalado
+# Por defecto se asume ~/.local/bin/tmux-session-switcher.sh
+
+# ============================================
+# Configuración Recomendada (v2.0)
+# ============================================
+
+# Alt+a - Popup switcher (estilo Alt-tab, 'a' = alt-tab alternative)
+# Presiona 1-9 para selección rápida, D para buscar directorios
+# NOTA: Alt+Tab es capturado por el sistema, usa Alt+a en su lugar
+bind-key -n M-a run-shell "~/.local/bin/tmux-session-switcher.sh popup"
+
+# Alt+s - Selector FZF completo (con preview y Ctrl+x para eliminar)
+bind-key -n M-s run-shell "tmux neww ~/.local/bin/tmux-session-switcher.sh fzf"
+
+# Alt+d - Buscar directorios y crear sesiones
+bind-key -n M-d run-shell "~/.local/bin/tmux-session-switcher.sh search"
+
+# Alt+n/p - Ciclar entre sesiones
+bind-key -n M-n run-shell "~/.local/bin/tmux-session-switcher.sh next"
+bind-key -n M-p run-shell "~/.local/bin/tmux-session-switcher.sh prev"
+
+# ============================================
+# Configuración Completa con Atajos Alternativos
+# ============================================
+
+# Popup switcher (Alt+a o alternativas con prefix)
+bind-key -n M-a run-shell "~/.local/bin/tmux-session-switcher.sh popup"
+bind-key Space run-shell "~/.local/bin/tmux-session-switcher.sh popup"  # Prefix + Space
+bind-key a run-shell "~/.local/bin/tmux-session-switcher.sh popup"      # Prefix + a
+
+# FZF selector completo
+bind-key -n M-s run-shell "tmux neww ~/.local/bin/tmux-session-switcher.sh fzf"
+bind-key s run-shell "tmux neww ~/.local/bin/tmux-session-switcher.sh fzf"  # Prefix + s
+bind-key S run-shell "tmux neww ~/.local/bin/tmux-session-switcher.sh fzf"  # Prefix + S
+
+# Búsqueda de directorios
+bind-key -n M-d run-shell "~/.local/bin/tmux-session-switcher.sh search"
+bind-key d run-shell "~/.local/bin/tmux-session-switcher.sh search"  # Prefix + d
+
+# Ciclar sesiones
+bind-key -n M-n run-shell "~/.local/bin/tmux-session-switcher.sh next"
+bind-key -n M-p run-shell "~/.local/bin/tmux-session-switcher.sh prev"
+bind-key n run-shell "~/.local/bin/tmux-session-switcher.sh next"  # Prefix + n
+bind-key p run-shell "~/.local/bin/tmux-session-switcher.sh prev"  # Prefix + p (nota: puede conflictuar con paste-buffer)
+
+# Menú nativo (fallback)
+bind-key M run-shell "~/.local/bin/tmux-session-switcher.sh menu"
+
+# ============================================
+# Session Commands (Comandos Configurables)
+# ============================================
+# Ejecuta comandos predefinidos en ventanas o panes
+# Configura TS_SESSION_COMMANDS en ~/.config/tmux-sessionizer/tmux-sessionizer.conf
+
+# Menú de comandos de sesión (Ctrl+b w)
+bind-key w display-menu -T "Session Commands" \
+    "System Monitor"    0 "run-shell '~/.local/bin/tmux-session-switcher.sh -s 0'" \
+    "Notes (vsplit)"    1 "run-shell '~/.local/bin/tmux-session-switcher.sh -s 1 --vsplit'" \
+    "Python REPL"       2 "run-shell '~/.local/bin/tmux-session-switcher.sh -s 2 --hsplit'" \
+    "Git Client"        3 "run-shell '~/.local/bin/tmux-session-switcher.sh -s 3'" \
+    "Docker Status"     4 "run-shell '~/.local/bin/tmux-session-switcher.sh -s 4'"
+
+# Atajos directos para comandos frecuentes
+# bind-key -n M-h run-shell "~/.local/bin/tmux-session-switcher.sh -s 0"  # Alt+h: htop
+# bind-key -n M-g run-shell "~/.local/bin/tmux-session-switcher.sh -s 3"  # Alt+g: git
+
+# ============================================
+# Atajos Adicionales Útiles
+# ============================================
+
+# Gestión rápida de sesiones
+bind-key -n M-t new-session                    # Alt+t: Nueva sesión
+bind-key -n M-w confirm-before -p "Kill session #S? (y/n)" kill-session  # Alt+w: Cerrar sesión
+
+# Renombrar sesión rápidamente
+bind-key -n M-r command-prompt -I "#S" "rename-session '%%'"  # Alt+r: Renombrar
+
+# ============================================
+# Configuración Alternativa (sin Alt)
+# ============================================
+# Si tu terminal no maneja bien Alt, usa estas alternativas con prefix (Ctrl+b):
+
+# Popup switcher - Prefix + Space (recomendado) o Prefix + a
+bind-key Space run-shell "~/.local/bin/tmux-session-switcher.sh popup"
+bind-key a run-shell "~/.local/bin/tmux-session-switcher.sh popup"
+
+# FZF selector - Prefix + s o Prefix + S
+bind-key s run-shell "tmux neww ~/.local/bin/tmux-session-switcher.sh fzf"
+bind-key S run-shell "tmux neww ~/.local/bin/tmux-session-switcher.sh fzf"
+
+# Búsqueda de directorios - Prefix + d
+bind-key d run-shell "~/.local/bin/tmux-session-switcher.sh search"
+
+# Ciclar sesiones - Prefix + n/N
+bind-key n run-shell "~/.local/bin/tmux-session-switcher.sh next"
+bind-key N run-shell "~/.local/bin/tmux-session-switcher.sh prev"
+
+# NOTA: Prefix + p puede conflictuar con paste-buffer, por eso se usa Prefix + N para prev
+
+# ============================================
+# Configuración Minimalista
+# ============================================
+# Si solo quieres lo esencial (solo popup switcher):
+
+# bind-key -n M-Tab run-shell "~/.local/bin/tmux-session-switcher.sh popup"
+
+# ============================================
+# Notas sobre Modos
+# ============================================
+#
+# POPUP MODE (recomendado):
+#   - Interfaz visual estilo Alt+Tab
+#   - Selección rápida con números 1-9
+#   - Opción D para buscar directorios
+#   - No requiere fzf
+#   - Funciona en tmux 3.2+
+#
+# FZF MODE (más completo):
+#   - Interfaz interactiva con fzf
+#   - Preview de ventanas por sesión
+#   - Ctrl+x para eliminar sesión
+#   - Ctrl+r para recargar lista
+#   - Requiere fzf instalado
+#
+# SEARCH MODE:
+#   - Busca directorios configurados en TS_SEARCH_PATHS
+#   - Crea sesión nueva desde directorio seleccionado
+#   - Soporta hydration scripts (.tmux-sessionizer)
+#   - Requiere fzf instalado
+#
+# SESSION COMMANDS:
+#   - Ejecuta comandos configurados en TS_SESSION_COMMANDS
+#   - Pueden ser ventanas (índice 69+) o splits (cacheados)
+#   - Uso: -s <idx> [--vsplit|--hsplit]
+
+# ============================================
+# Mejoras de Usabilidad (Opcionales)
+# ============================================
+
+# Numeración de ventanas desde 1 (más natural en el teclado)
+set -g base-index 1
+setw -g pane-base-index 1
+
+# Renumerar ventanas automáticamente al cerrar una
+set -g renumber-windows on
+
+# Aumentar el historial de scroll
+set -g history-limit 10000
+
+# Habilitar mouse (útil para hacer clic en ventanas)
+set -g mouse on
+
+# Reducir tiempo de escape (mejor para vim/neovim)
+set -sg escape-time 10
+
+# Mejorar colores
+set -g default-terminal "screen-256color"
+set -ga terminal-overrides ",*256col*:Tc"
+
+# ============================================
+# Barra de Estado Personalizada (Opcional)
+# ============================================
+
+# Actualizar barra de estado cada 5 segundos
+set -g status-interval 5
+
+# Centrar lista de ventanas
+set -g status-justify centre
+
+# Formato de la barra de estado
+set -g status-left-length 40
+set -g status-left "#[fg=green]Session: #S #[fg=yellow]#I #[fg=cyan]#P"
+set -g status-right "#[fg=cyan]%d %b %R"
+
+# Colores de la barra
+set -g status-style fg=white,bg=black
+
+# Resaltar ventana activa
+setw -g window-status-current-style fg=black,bg=green
+
+# ============================================
+# Atajos de Teclado Útiles Adicionales
+# ============================================
+
+# Recargar configuración fácilmente
+bind-key r source-file ~/.tmux.conf \; display-message "Config reloaded!"
+
+# Dividir ventanas de forma más intuitiva
+bind-key | split-window -h -c "#{pane_current_path}"  # Vertical
+bind-key - split-window -v -c "#{pane_current_path}"  # Horizontal
+
+# Navegación entre panes estilo vim
+bind-key h select-pane -L
+bind-key j select-pane -D
+bind-key k select-pane -U
+bind-key l select-pane -R
+
+# Redimensionar panes
+bind-key -r H resize-pane -L 5
+bind-key -r J resize-pane -D 5
+bind-key -r K resize-pane -U 5
+bind-key -r L resize-pane -R 5
+
+# ============================================
+# Notas de Instalación
+# ============================================
+#
+# INSTALACIÓN AUTOMÁTICA (Recomendado):
+#   ./install.sh
+#   - Copia el script a ~/.local/bin/
+#   - Crea directorios de config y cache
+#   - Instala configuración ejemplo
+#   - Agrega keybindings a ~/.tmux.conf
+#   - Recarga la configuración automáticamente
+#
+# INSTALACIÓN MANUAL:
+#   1. Copiar el script:
+#      cp tmux-session-switcher.sh ~/.local/bin/
+#      chmod +x ~/.local/bin/tmux-session-switcher.sh
+#
+#   2. Crear directorios:
+#      mkdir -p ~/.config/tmux-sessionizer
+#      mkdir -p ~/.cache/tmux-sessionizer
+#      mkdir -p ~/.local/share/tmux-sessionizer
+#
+#   3. Copiar configuración:
+#      cp config.example ~/.config/tmux-sessionizer/tmux-sessionizer.conf
+#
+#   4. Agregar keybindings de este archivo a ~/.tmux.conf
+#
+#   5. Recargar configuración:
+#      tmux source-file ~/.tmux.conf
+#      O: Ctrl+b : source-file ~/.tmux.conf
+#
+# DEPENDENCIAS:
+#   - tmux 3.2+ (requerido para popup mode)
+#   - fzf (opcional, para fzf mode y search mode)
+#   - find (incluido en la mayoría de sistemas)
+#
+# CONFIGURACIÓN:
+#   - Archivo principal: ~/.config/tmux-sessionizer/tmux-sessionizer.conf
+#   - Ver config.example para ejemplos
+#   - Configura TS_SEARCH_PATHS para búsqueda de directorios
+#   - Configura TS_SESSION_COMMANDS para comandos rápidos
+#
+# HYDRATION SCRIPTS:
+#   - Global: ~/.tmux-sessionizer
+#   - Por proyecto: <proyecto>/.tmux-sessionizer
+#   - Se ejecutan automáticamente al crear sesiones nuevas
+#
+# ============================================
