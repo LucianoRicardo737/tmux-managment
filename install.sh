@@ -364,23 +364,160 @@ print_success() {
 }
 
 uninstall() {
-    echo -e "${CYAN}Uninstalling tmux-session-switcher...${RESET}"
+    echo -e "${CYAN}${BOLD}"
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║       tmux Session Switcher - Uninstaller                    ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo -e "${RESET}"
 
-    # Remove script
-    [ -f "$SCRIPT_PATH" ] && rm "$SCRIPT_PATH" && echo "  Removed $SCRIPT_PATH"
+    echo -e "${YELLOW}This will remove:${RESET}"
+    echo "  - Main script ($SCRIPT_PATH)"
+    echo "  - Configuration ($CONFIG_DIR)"
+    echo "  - Cache files ($CACHE_DIR)"
+    echo "  - Log files ($LOG_DIR)"
+    echo "  - Claude Code hooks ($CLAUDE_HOOKS_DIR)"
+    echo "  - Claude notifications cache"
+    echo "  - Keybindings from ~/.tmux.conf"
+    echo ""
 
-    # Remove config (ask first)
-    if [ -f "$CONFIG_FILE" ]; then
-        read -p "  Remove config file? [y/N] " -n 1 -r
-        echo
-        [[ $REPLY =~ ^[Yy]$ ]] && rm "$CONFIG_FILE" && echo "  Removed $CONFIG_FILE"
+    read -p "Continue with uninstall? [y/N] " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Cancelled."
+        exit 0
     fi
 
-    # Note about tmux.conf
-    echo -e "${YELLOW}  Manual cleanup needed in $TMUX_CONF${RESET}"
-    echo "  Remove sections marked 'tmux-session-switcher'"
+    echo ""
+    echo -e "${CYAN}[1/6] Removing main script...${RESET}"
+    if [ -f "$SCRIPT_PATH" ]; then
+        rm "$SCRIPT_PATH"
+        echo -e "${GREEN}  ✓ Removed $SCRIPT_PATH${RESET}"
+    else
+        echo -e "${DIM}  - Script not found (already removed)${RESET}"
+    fi
 
-    echo -e "${GREEN}Uninstall complete.${RESET}"
+    echo -e "${CYAN}[2/6] Removing configuration...${RESET}"
+    if [ -d "$CONFIG_DIR" ]; then
+        rm -rf "$CONFIG_DIR"
+        echo -e "${GREEN}  ✓ Removed $CONFIG_DIR${RESET}"
+    else
+        echo -e "${DIM}  - Config directory not found${RESET}"
+    fi
+
+    echo -e "${CYAN}[3/6] Removing cache and logs...${RESET}"
+    if [ -d "$CACHE_DIR" ]; then
+        rm -rf "$CACHE_DIR"
+        echo -e "${GREEN}  ✓ Removed $CACHE_DIR${RESET}"
+    fi
+    if [ -d "$LOG_DIR" ]; then
+        rm -rf "$LOG_DIR"
+        echo -e "${GREEN}  ✓ Removed $LOG_DIR${RESET}"
+    fi
+
+    echo -e "${CYAN}[4/6] Removing Claude Code hooks...${RESET}"
+    if [ -d "$CLAUDE_HOOKS_DIR" ]; then
+        # Only remove our files, not the whole directory
+        [ -f "$CLAUDE_HOOKS_DIR/tmux-notification.py" ] && rm "$CLAUDE_HOOKS_DIR/tmux-notification.py"
+        [ -f "$CLAUDE_HOOKS_DIR/claude-popup.sh" ] && rm "$CLAUDE_HOOKS_DIR/claude-popup.sh"
+        [ -f "$CLAUDE_HOOKS_DIR/notification-queue.sh" ] && rm "$CLAUDE_HOOKS_DIR/notification-queue.sh"
+        echo -e "${GREEN}  ✓ Removed Claude hook scripts${RESET}"
+
+        # Remove deprecated folder if exists
+        [ -d "$CLAUDE_HOOKS_DIR/deprecated" ] && rm -rf "$CLAUDE_HOOKS_DIR/deprecated"
+
+        # Remove directory if empty
+        if [ -d "$CLAUDE_HOOKS_DIR" ] && [ -z "$(ls -A "$CLAUDE_HOOKS_DIR" 2>/dev/null)" ]; then
+            rmdir "$CLAUDE_HOOKS_DIR"
+            echo -e "${GREEN}  ✓ Removed empty $CLAUDE_HOOKS_DIR${RESET}"
+        fi
+    else
+        echo -e "${DIM}  - Claude hooks not found${RESET}"
+    fi
+
+    # Remove Claude notifications cache
+    CLAUDE_CACHE="$HOME/.cache/claude-notifications"
+    if [ -d "$CLAUDE_CACHE" ]; then
+        rm -rf "$CLAUDE_CACHE"
+        echo -e "${GREEN}  ✓ Removed $CLAUDE_CACHE${RESET}"
+    fi
+
+    echo -e "${CYAN}[5/6] Cleaning tmux.conf...${RESET}"
+    if [ -f "$TMUX_CONF" ]; then
+        # Create backup
+        BACKUP="$TMUX_CONF.backup.$(date +%Y%m%d_%H%M%S)"
+        cp "$TMUX_CONF" "$BACKUP"
+        echo -e "${DIM}  Backed up to $BACKUP${RESET}"
+
+        # Remove our sections using sed
+        # Remove Session Switcher section
+        sed -i '/# ═.*tmux Session Switcher/,/^# ═.*[^S]/{ /^# ═.*[^S]/!d; }' "$TMUX_CONF" 2>/dev/null || true
+        sed -i '/# ═.*tmux Session Switcher/d' "$TMUX_CONF" 2>/dev/null || true
+
+        # Remove Session Persistence section
+        sed -i '/# ═.*Session Persistence/,/^# ═\|^$/{ /^# ═[^S]/!d; }' "$TMUX_CONF" 2>/dev/null || true
+        sed -i '/tmux-resurrect/d' "$TMUX_CONF" 2>/dev/null || true
+        sed -i '/tmux-continuum/d' "$TMUX_CONF" 2>/dev/null || true
+        sed -i '/@resurrect/d' "$TMUX_CONF" 2>/dev/null || true
+        sed -i '/@continuum/d' "$TMUX_CONF" 2>/dev/null || true
+
+        # Remove Claude Code section
+        sed -i '/# ═.*Claude Code/,/^# ═\|^$/{ /^# ═[^C]/!d; }' "$TMUX_CONF" 2>/dev/null || true
+        sed -i '/notification-queue/d' "$TMUX_CONF" 2>/dev/null || true
+
+        # Remove tmux-session-switcher related lines
+        sed -i '/tmux-session-switcher/d' "$TMUX_CONF" 2>/dev/null || true
+
+        # Remove TPM lines (only if we added them)
+        sed -i "/@plugin 'tmux-plugins\/tpm'/d" "$TMUX_CONF" 2>/dev/null || true
+        sed -i '/run.*\.tmux\/plugins\/tpm\/tpm/d' "$TMUX_CONF" 2>/dev/null || true
+
+        # Clean up multiple empty lines
+        sed -i '/^$/N;/^\n$/d' "$TMUX_CONF" 2>/dev/null || true
+
+        echo -e "${GREEN}  ✓ Cleaned tmux.conf${RESET}"
+    else
+        echo -e "${DIM}  - tmux.conf not found${RESET}"
+    fi
+
+    echo -e "${CYAN}[6/6] Optional cleanup...${RESET}"
+    echo ""
+    read -p "  Remove TPM and plugins (~/.tmux/plugins)? [y/N] " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if [ -d "$HOME/.tmux/plugins" ]; then
+            rm -rf "$HOME/.tmux/plugins"
+            echo -e "${GREEN}  ✓ Removed ~/.tmux/plugins${RESET}"
+        fi
+        if [ -d "$HOME/.tmux" ] && [ -z "$(ls -A "$HOME/.tmux" 2>/dev/null)" ]; then
+            rmdir "$HOME/.tmux"
+            echo -e "${GREEN}  ✓ Removed empty ~/.tmux${RESET}"
+        fi
+    else
+        echo -e "${DIM}  - Keeping TPM and plugins${RESET}"
+    fi
+
+    # Reload tmux if running
+    if [ -n "$TMUX" ]; then
+        echo ""
+        echo -e "${CYAN}Reloading tmux configuration...${RESET}"
+        tmux source-file "$TMUX_CONF" 2>/dev/null || true
+        echo -e "${GREEN}  ✓ Configuration reloaded${RESET}"
+    fi
+
+    echo ""
+    echo -e "${GREEN}${BOLD}═══════════════════════════════════════════════════════════════${RESET}"
+    echo -e "${GREEN}${BOLD}                    Uninstall Complete!                         ${RESET}"
+    echo -e "${GREEN}${BOLD}═══════════════════════════════════════════════════════════════${RESET}"
+    echo ""
+    echo -e "${CYAN}Removed:${RESET}"
+    echo "  - tmux-session-switcher script"
+    echo "  - Configuration and cache"
+    echo "  - Claude Code hooks"
+    echo "  - Keybindings from tmux.conf"
+    echo ""
+    echo -e "${YELLOW}Note:${RESET} A backup of your tmux.conf was created."
+    echo "If you had other customizations, you may need to restore them."
+    echo ""
 }
 
 show_menu() {
