@@ -7,7 +7,7 @@
 
 # Note: Not using 'set -e' to allow interactive menus to handle errors gracefully
 
-VERSION="2.0.0"
+VERSION="2.1.0"
 
 # Get script path at the beginning
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
@@ -45,14 +45,14 @@ if [[ $TS_LOG != "true" ]]; then
     mkdir -p "$(dirname "$TS_LOG_FILE")"
 fi
 
-# Logging function
+# Logging function (optimizado con printf)
 log() {
     if [[ -z $TS_LOG ]]; then
         return
     elif [[ $TS_LOG == "echo" ]]; then
         echo "$*"
     elif [[ $TS_LOG == "file" ]]; then
-        echo "$(date '+%Y-%m-%d %H:%M:%S') - $*" >> "$TS_LOG_FILE"
+        printf '%(%Y-%m-%d %H:%M:%S)T - %s\n' -1 "$*" >> "$TS_LOG_FILE"
     fi
 }
 
@@ -62,17 +62,113 @@ session_cmd=""
 user_selected=""
 split_type=""
 
+# === CACHE SYSTEM (bash 4.0+) ===
+declare -g _CACHE_SESSIONS=""
+declare -g _CACHE_SESSIONS_DETAILED=""
+declare -g _CACHE_CURRENT_SESSION=""
+declare -g _CACHE_PANES=""
+declare -g _CACHE_TIMESTAMP=0
+declare -g _CACHE_TTL=2  # segundos de validez
+declare -gA _CACHE_WINDOWS_BY_SESSION
+
+# Invalidar caché (llamar después de operaciones de modificación)
+_cache_invalidate() {
+    _CACHE_SESSIONS=""
+    _CACHE_SESSIONS_DETAILED=""
+    _CACHE_PANES=""
+    _CACHE_WINDOWS_BY_SESSION=()
+    _CACHE_TIMESTAMP=0
+}
+
+# Verificar si el caché es válido
+_cache_is_valid() {
+    local now
+    printf -v now '%(%s)T' -1
+    (( now - _CACHE_TIMESTAMP < _CACHE_TTL ))
+}
+
+# Obtener sesiones simples (con caché)
+_get_sessions() {
+    if [[ -z "$_CACHE_SESSIONS" ]] || ! _cache_is_valid; then
+        _CACHE_SESSIONS=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | sort)
+        printf -v _CACHE_TIMESTAMP '%(%s)T' -1
+    fi
+    printf '%s' "$_CACHE_SESSIONS"
+}
+
+# Obtener sesiones con detalles: nombre|ventanas|attached (con caché)
+_get_sessions_detailed() {
+    if [[ -z "$_CACHE_SESSIONS_DETAILED" ]] || ! _cache_is_valid; then
+        _CACHE_SESSIONS_DETAILED=$(tmux list-sessions -F "#{session_name}|#{session_windows}|#{session_attached}" 2>/dev/null | sort)
+        printf -v _CACHE_TIMESTAMP '%(%s)T' -1
+    fi
+    printf '%s' "$_CACHE_SESSIONS_DETAILED"
+}
+
+# Obtener sesión actual (caché permanente durante ejecución)
+_get_current_session() {
+    if [[ -z "$_CACHE_CURRENT_SESSION" ]] && [[ -n "$TMUX" ]]; then
+        _CACHE_CURRENT_SESSION=$(tmux display-message -p '#S' 2>/dev/null)
+    fi
+    printf '%s' "$_CACHE_CURRENT_SESSION"
+}
+
+# Obtener ventanas de una sesión (caché por sesión)
+_get_windows() {
+    local session="$1"
+    local format="${2:-#{window_index}|#{window_name}|#{window_panes}|#{window_active}}"
+    local cache_key="${session}:${format}"
+
+    if [[ -z "${_CACHE_WINDOWS_BY_SESSION[$cache_key]}" ]] || ! _cache_is_valid; then
+        _CACHE_WINDOWS_BY_SESSION[$cache_key]=$(tmux list-windows -t "$session" -F "$format" 2>/dev/null)
+    fi
+    printf '%s' "${_CACHE_WINDOWS_BY_SESSION[$cache_key]}"
+}
+
+# Obtener todos los panes (con caché)
+_get_all_panes() {
+    if [[ -z "$_CACHE_PANES" ]] || ! _cache_is_valid; then
+        _CACHE_PANES=$(tmux list-panes -a -F "#{pane_id}" 2>/dev/null)
+    fi
+    printf '%s' "$_CACHE_PANES"
+}
+
+# Reordenar sesiones: actual primero, resto en orden original
+_reorder_sessions_current_first() {
+    local current="$1" sessions="$2"
+    [[ -z "$current" ]] && { printf '%s' "$sessions"; return; }
+
+    local current_line="" other_lines=""
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        if [[ "$line" == "$current" ]] || [[ "$line" == "${current}|"* ]]; then
+            current_line="$line"
+        else
+            other_lines+="${other_lines:+$'\n'}$line"
+        fi
+    done <<< "$sessions"
+
+    if [[ -n "$current_line" ]]; then
+        printf '%s' "$current_line"
+        [[ -n "$other_lines" ]] && printf '\n%s' "$other_lines"
+    else
+        printf '%s' "$sessions"
+    fi
+}
+
 # Helper functions
 is_tmux_running() {
-    tmux_running=$(pgrep tmux)
-    if [[ -z $TMUX ]] && [[ -z $tmux_running ]]; then
-        return 1
-    fi
-    return 0
+    # Si estamos dentro de tmux, ya está corriendo
+    [[ -n "$TMUX" ]] && return 0
+    # Verificar si el servidor tmux está disponible
+    tmux list-sessions &>/dev/null
 }
 
 has_session() {
-    tmux list-sessions 2>/dev/null | grep -q "^$1:"
+    local name="$1"
+    local sessions
+    sessions=$(_get_sessions)
+    [[ $'\n'"$sessions"$'\n' == *$'\n'"$name"$'\n'* ]]
 }
 
 sanity_check() {
@@ -82,10 +178,10 @@ sanity_check() {
     fi
 }
 
-# Get current session (only if inside tmux)
+# Get current session (only if inside tmux) - usando caché
 CURRENT_SESSION=""
 if [[ -n "$TMUX" ]]; then
-    CURRENT_SESSION=$(tmux display-message -p '#S')
+    CURRENT_SESSION=$(_get_current_session)
 fi
 
 # Pane cache management
@@ -118,9 +214,12 @@ set_pane_id() {
 cleanup_dead_panes() {
     init_pane_cache
     local temp_file="${PANE_CACHE_FILE}.tmp"
+    local all_panes
+    all_panes=$(_get_all_panes)
 
     while IFS=: read -r idx split pane_id; do
-        if tmux list-panes -a -F "#{pane_id}" 2>/dev/null | grep -q "^${pane_id}$"; then
+        # Verificar si el pane existe usando bash puro
+        if [[ $'\n'"$all_panes"$'\n' == *$'\n'"$pane_id"$'\n'* ]]; then
             echo "${idx}:${split}:${pane_id}" >> "$temp_file"
         fi
     done < "$PANE_CACHE_FILE"
@@ -152,13 +251,18 @@ find_dirs() {
         TS_SEARCH_PATHS+=("${TS_EXTRA_SEARCH_PATHS[@]}")
     fi
 
-    # List TMUX sessions
-    if [[ -n "${TMUX}" ]]; then
-        current_session=$(tmux display-message -p '#S')
-        tmux list-sessions -F "[TMUX] #{session_name}" 2>/dev/null | grep -vFx "[TMUX] $current_session"
-    else
-        tmux list-sessions -F "[TMUX] #{session_name}" 2>/dev/null
-    fi
+    # List TMUX sessions (usando caché)
+    local current_session=""
+    [[ -n "${TMUX}" ]] && current_session=$(_get_current_session)
+
+    local sessions_list
+    sessions_list=$(_get_sessions)
+    while IFS= read -r name; do
+        [[ -z "$name" ]] && continue
+        # Skip current session if inside tmux
+        [[ -n "$current_session" ]] && [[ "$name" == "$current_session" ]] && continue
+        echo "[TMUX] $name"
+    done <<< "$sessions_list"
 
     # Search for directories in configured paths
     for entry in "${TS_SEARCH_PATHS[@]}"; do
@@ -200,8 +304,9 @@ switch_with_fzf() {
     # Use installed fzf if available, otherwise use system fzf
     [[ -x "$FZF_BIN" ]] && local FZF_CMD="$FZF_BIN" || local FZF_CMD="fzf"
 
-    # Get all sessions with details
-    local sessions=$(tmux list-sessions -F "#{session_name}|#{session_windows}|#{session_attached}" 2>/dev/null | sort)
+    # Get all sessions with details (usando caché)
+    local sessions
+    sessions=$(_get_sessions_detailed)
 
     if [ -z "$sessions" ]; then
         echo -e "${RED}No sessions found${RESET}"
@@ -244,16 +349,18 @@ switch_with_fzf() {
         exit 0
     fi
 
-    # Parse result: first line is key, second is selection
-    local key=$(echo "$selected" | head -1)
-    local choice=$(echo "$selected" | tail -1)
+    # Parse result: first line is key, second is selection (bash puro)
+    local key="${selected%%$'\n'*}"
+    local choice="${selected##*$'\n'}"
 
-    if [ -z "$choice" ]; then
+    if [[ -z "$choice" ]]; then
         exit 0
     fi
 
-    # Extract session name (remove marker and get first word)
-    local session_name=$(echo "$choice" | sed 's/^[●○ ]*//' | awk '{print $1}')
+    # Extract session name (bash puro: quitar marcador y obtener primera palabra)
+    local session_name="${choice#[●○ ]}"
+    session_name="${session_name#"${session_name%%[![:space:]]*}"}"
+    session_name="${session_name%% *}"
 
     # Handle action
     case "$key" in
@@ -286,50 +393,39 @@ switch_with_fzf_hierarchical() {
     # Use installed fzf if available, otherwise use system fzf
     [[ -x "$FZF_BIN" ]] && local FZF_CMD="$FZF_BIN" || local FZF_CMD="fzf"
 
-    # Get sessions - sorted alphabetically
-    local all_sessions=$(tmux list-sessions -F "#{session_name}|#{session_windows}|#{session_attached}" 2>/dev/null | sort)
+    # Get sessions - sorted alphabetically (usando caché)
+    local all_sessions
+    all_sessions=$(_get_sessions_detailed)
 
-    if [ -z "$all_sessions" ]; then
+    if [[ -z "$all_sessions" ]]; then
         tmux display-message "No sessions found"
         return 1
     fi
 
-    # Reorder: current session first, then rest alphabetically
-    local sessions=""
-    if [[ -n "$current_session" ]]; then
-        # Get current session line
-        local current_line=$(echo "$all_sessions" | grep "^${current_session}|")
-        # Get other sessions (excluding current)
-        local other_sessions=$(echo "$all_sessions" | grep -v "^${current_session}|")
-        # Combine: current first, then others
-        if [[ -n "$current_line" ]]; then
-            sessions="$current_line"
-            [[ -n "$other_sessions" ]] && sessions="${sessions}\n${other_sessions}"
-        else
-            sessions="$all_sessions"
-        fi
-    else
-        sessions="$all_sessions"
-    fi
+    # Reorder: current session first (usando función helper)
+    local sessions
+    sessions=$(_reorder_sessions_current_first "$current_session" "$all_sessions")
 
     # Build hierarchical list: sessions with windows indented below
     local formatted=""
     formatted+="ACTION::new::::${CYAN}[+]${RESET} Nueva sesión\n"
 
     while IFS='|' read -r name windows attached; do
+        [[ -z "$name" ]] && continue
         # Session line (4 fields for consistency)
         local marker="  "
         local color=""
-        [ "$name" = "$current_session" ] && marker="● " && color="${GREEN}"
-        [ "$attached" = "1" ] && [ "$name" != "$current_session" ] && marker="○ " && color="${CYAN}"
+        [[ "$name" == "$current_session" ]] && marker="● " && color="${GREEN}"
+        [[ "$attached" == "1" ]] && [[ "$name" != "$current_session" ]] && marker="○ " && color="${CYAN}"
         formatted+="SESSION::${name}::::${color}${marker}${name}${RESET} ${DIM}(${windows}w)${RESET}\n"
 
-        # Windows under this session (4 fields)
-        local win_list=$(tmux list-windows -t "$name" -F "#{window_index}|#{window_name}|#{window_panes}|#{window_active}" 2>/dev/null)
+        # Windows under this session (usando caché)
+        local win_list
+        win_list=$(_get_windows "$name" "#{window_index}|#{window_name}|#{window_panes}|#{window_active}")
         # Only process windows if we have data
         [[ -n "$win_list" ]] && while IFS='|' read -r idx wname panes active; do
             local wmarker="  "
-            [ "$active" = "1" ] && wmarker="${GREEN}✓${RESET} "
+            [[ "$active" == "1" ]] && wmarker="${GREEN}✓${RESET} "
             formatted+="WINDOW::${name}::${idx}::  ${wmarker}[${idx}] ${wname} ${DIM}(${panes}p)${RESET}\n"
         done <<< "$win_list"
     done <<< "$sessions"
@@ -354,18 +450,20 @@ switch_with_fzf_hierarchical() {
         return 0
     fi
 
-    # Parse result: first line is the key pressed, second line is the selection
-    local key=$(echo "$result" | head -1)
-    local selected=$(echo "$result" | tail -1)
+    # Parse result: first line is the key pressed, second line is the selection (bash puro)
+    local key="${result%%$'\n'*}"
+    local selected="${result##*$'\n'}"
 
-    if [ -z "$selected" ]; then
+    if [[ -z "$selected" ]]; then
         return 0
     fi
 
-    # Parse selection (format: TYPE::session::window::display_text)
-    local type=$(echo "$selected" | awk -F'::' '{print $1}')
-    local session_name=$(echo "$selected" | awk -F'::' '{print $2}')
-    local window_idx=$(echo "$selected" | awk -F'::' '{print $3}')
+    # Parse selection (format: TYPE::session::window::display_text) - bash puro
+    local type="${selected%%::*}"
+    local temp="${selected#*::}"
+    local session_name="${temp%%::*}"
+    temp="${temp#*::}"
+    local window_idx="${temp%%::*}"
 
     # Handle action based on key pressed
     case "$key" in
@@ -448,10 +546,10 @@ switch_with_fzf_hierarchical() {
 switch_with_menu() {
     local current_session="$1"
 
-    # Build menu items
+    # Build menu items (usando caché)
     local menu_items=""
     local sessions
-    sessions=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | sort)
+    sessions=$(_get_sessions)
 
     if [ -z "$sessions" ]; then
         tmux display-message "No sessions found"
@@ -493,8 +591,10 @@ handle_split_session_cmd() {
 
     # Check if pane already exists
     local existing_pane_id=$(get_pane_id "$session_idx" "$split_type")
+    local all_panes
+    all_panes=$(_get_all_panes)
 
-    if [[ -n "$existing_pane_id" ]] && tmux list-panes -a -F "#{pane_id}" 2>/dev/null | grep -q "^${existing_pane_id}$"; then
+    if [[ -n "$existing_pane_id" ]] && [[ $'\n'"$all_panes"$'\n' == *$'\n'"$existing_pane_id"$'\n'* ]]; then
         log "switching to existing pane $existing_pane_id"
         tmux select-pane -t "$existing_pane_id"
         if [[ -z $TMUX ]]; then
@@ -538,159 +638,157 @@ handle_session_cmd() {
     exit 0
 }
 
-# Function to cycle to next session
-cycle_next() {
-    local current_session="$1"
+# Función genérica para ciclar sesiones (optimizado)
+_cycle_session() {
+    local direction="$1" current_session="$2"
     local sessions
-    sessions=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | sort)
+    sessions=$(_get_sessions)
 
-    local session_array=()
-    while IFS= read -r session; do
-        session_array+=("$session")
-    done <<< "$sessions"
+    # Usar mapfile para construir array eficientemente (bash 4.0+)
+    local -a session_array
+    mapfile -t session_array <<< "$sessions"
 
     local total=${#session_array[@]}
-    if [ $total -le 1 ]; then
+    if (( total <= 1 )); then
         tmux display-message "Only one session available"
-        exit 0
+        return 0
     fi
 
-    # Find current index
-    local current_index=-1
+    # Encontrar índice actual
+    local current_index=-1 i
     for i in "${!session_array[@]}"; do
-        if [ "${session_array[$i]}" = "$current_session" ]; then
+        if [[ "${session_array[$i]}" == "$current_session" ]]; then
             current_index=$i
             break
         fi
     done
 
-    # Get next index (wrap around)
-    local next_index=$(( (current_index + 1) % total ))
-    local next_session="${session_array[$next_index]}"
-
-    tmux switch-client -t "$next_session"
-    tmux display-message "Switched to: $next_session"
-}
-
-# Function to cycle to previous session
-cycle_prev() {
-    local current_session="$1"
-    local sessions
-    sessions=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | sort)
-
-    local session_array=()
-    while IFS= read -r session; do
-        session_array+=("$session")
-    done <<< "$sessions"
-
-    local total=${#session_array[@]}
-    if [ $total -le 1 ]; then
-        tmux display-message "Only one session available"
-        exit 0
+    # Calcular índice objetivo según dirección
+    local target_index
+    if [[ "$direction" == "next" ]]; then
+        target_index=$(( (current_index + 1) % total ))
+    else
+        target_index=$(( (current_index - 1 + total) % total ))
     fi
 
-    # Find current index
-    local current_index=-1
-    for i in "${!session_array[@]}"; do
-        if [ "${session_array[$i]}" = "$current_session" ]; then
-            current_index=$i
-            break
-        fi
-    done
-
-    # Get previous index (wrap around)
-    local prev_index=$(( (current_index - 1 + total) % total ))
-    local prev_session="${session_array[$prev_index]}"
-
-    tmux switch-client -t "$prev_session"
-    tmux display-message "Switched to: $prev_session"
+    local target_session="${session_array[$target_index]}"
+    tmux switch-client -t "$target_session"
+    tmux display-message "Switched to: $target_session"
 }
 
-# Popup mode with numeric selection and inline windows
+# Wrappers para cycle_next y cycle_prev
+cycle_next() { _cycle_session "next" "$1"; }
+cycle_prev() { _cycle_session "prev" "$1"; }
+
+# Popup mode with numeric selection and inline windows (optimizado v2.1)
 switch_with_popup() {
     local current_session="$1"
 
-    # Create temporary script for popup
-    local popup_script="/tmp/tmux-popup-$$.sh"
+    # Precalcular datos de sesiones usando caché
+    local sessions_data
+    sessions_data=$(_get_sessions_detailed)
 
-    cat > "$popup_script" << 'POPUP_SCRIPT'
-#!/usr/bin/env bash
-CYAN="\033[0;36m"
-GREEN="\033[0;32m"
-YELLOW="\033[1;33m"
-RED="\033[0;31m"
-BOLD="\033[1m"
-DIM="\033[2m"
-RESET="\033[0m"
+    if [[ -z "$sessions_data" ]]; then
+        tmux display-message "No sessions found"
+        return 1
+    fi
+
+    # Precalcular ventanas para cada sesión (máx 9 sesiones, 3 ventanas cada una)
+    local -a session_names=()
+    local -a session_windows_count=()
+    local -a session_attached=()
+    local -a session_windows_data=()
+
+    local idx=0
+    while IFS='|' read -r name windows attached; do
+        [[ -z "$name" ]] && continue
+        (( idx >= 9 )) && break
+
+        session_names+=("$name")
+        session_windows_count+=("$windows")
+        session_attached+=("$attached")
+
+        # Obtener primeras 3 ventanas
+        local win_data=""
+        local win_count=0
+        local win_list
+        win_list=$(_get_windows "$name" "#{window_name}|#{window_active}")
+        while IFS='|' read -r w_name w_active; do
+            [[ -z "$w_name" ]] && continue
+            (( win_count >= 3 )) && break
+            win_data+="${w_name}:${w_active};"
+            ((win_count++))
+        done <<< "$win_list"
+        session_windows_data+=("$win_data")
+
+        ((idx++))
+    done <<< "$sessions_data"
+
+    # Codificar datos para pasar al popup (sin archivo temporal)
+    local encoded_sessions=""
+    for i in "${!session_names[@]}"; do
+        encoded_sessions+="${session_names[$i]}|${session_windows_count[$i]}|${session_attached[$i]}|${session_windows_data[$i]}"$'\x1E'
+    done
+
+    # Ejecutar popup inline con bash -c (sin archivo temporal)
+    local selected
+    if [[ -n "$TMUX" ]]; then
+        selected=$(tmux display-popup -w 80% -h 70% -E bash -c '
+# Colores
+CYAN="\033[0;36m"; GREEN="\033[0;32m"; YELLOW="\033[1;33m"
+RED="\033[0;31m"; BOLD="\033[1m"; DIM="\033[2m"; RESET="\033[0m"
 
 current_session="$1"
+encoded_data="$2"
 
-# Get sessions
-sessions=$(tmux list-sessions -F "#{session_name}|#{session_windows}|#{session_attached}" 2>/dev/null | sort)
+# Decodificar sesiones
+declare -a session_names=()
+declare -a session_windows=()
+declare -a session_attached=()
+declare -a session_win_data=()
 
-if [ -z "$sessions" ]; then
-    echo -e "${RED}No sessions found${RESET}"
-    read -n 1 -s
-    exit 1
-fi
-
-# Build session array
-declare -a session_names
-declare -a session_windows
-declare -a session_attached
-idx=1
-
-while IFS='|' read -r name windows attached; do
+while IFS=$'\''\x1E'\'' read -r entry; do
+    [[ -z "$entry" ]] && continue
+    IFS="|" read -r name windows attached wins <<< "$entry"
     session_names+=("$name")
     session_windows+=("$windows")
     session_attached+=("$attached")
-    ((idx++))
-done <<< "$sessions"
+    session_win_data+=("$wins")
+done <<< "$encoded_data"
 
 # Display UI
 clear
 echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════════════════════════╗${RESET}"
-echo -e "${BOLD}${CYAN}║${RESET}              ${BOLD}SESSION MANAGER${RESET}                          ${BOLD}${CYAN}║${RESET}"
+echo -e "${BOLD}${CYAN}║${RESET}              ${BOLD}SESSION MANAGER${RESET}                   ${DIM}v$3${RESET}  ${BOLD}${CYAN}║${RESET}"
 echo -e "${BOLD}${CYAN}╠══════════════════════════════════════════════════════════════╣${RESET}"
 echo ""
 
-# Show sessions with numbers and inline windows
 for i in "${!session_names[@]}"; do
     num=$((i + 1))
     name="${session_names[$i]}"
     windows="${session_windows[$i]}"
     attached="${session_attached[$i]}"
 
-    # Determine marker and color
     if [ "$name" = "$current_session" ]; then
-        marker="●"
-        color="$GREEN"
+        marker="●"; color="$GREEN"
     elif [ "$attached" = "1" ]; then
-        marker="○"
-        color="$CYAN"
+        marker="○"; color="$CYAN"
     else
-        marker=" "
-        color=""
+        marker=" "; color=""
     fi
 
-    # Show max 9 sessions for numeric selection
-    if [ $num -le 9 ]; then
-        echo -e "  ${BOLD}[${num}]${RESET} ${color}${marker} ${name}${RESET} ${DIM}(${windows}w)${RESET}"
+    echo -e "  ${BOLD}[${num}]${RESET} ${color}${marker} ${name}${RESET} ${DIM}(${windows}w)${RESET}"
 
-        # Show first 3 windows inline
-        local win_count=0
-        while IFS='|' read -r w_idx w_name w_active; do
-            ((win_count++))
-            if [ $win_count -le 3 ]; then
-                local w_marker=" "
-                [ "$w_active" = "1" ] && w_marker="✓"
-                echo -e "       ${DIM}${w_marker} ${w_name}${RESET}"
-            fi
-        done < <(tmux list-windows -t "$name" -F "#{window_index}|#{window_name}|#{window_active}" 2>/dev/null)
-
-        # Add spacing
-        echo ""
-    fi
+    # Mostrar ventanas precalculadas
+    IFS=";" read -ra wins <<< "${session_win_data[$i]}"
+    for win in "${wins[@]}"; do
+        [[ -z "$win" ]] && continue
+        IFS=":" read -r w_name w_active <<< "$win"
+        w_marker=" "
+        [ "$w_active" = "1" ] && w_marker="✓"
+        echo -e "       ${DIM}${w_marker} ${w_name}${RESET}"
+    done
+    echo ""
 done
 
 echo -e "${BOLD}${CYAN}╠══════════════════════════════════════════════════════════════╣${RESET}"
@@ -699,11 +797,9 @@ echo -e "${BOLD}${CYAN}╚══════════════════
 echo ""
 echo -ne "${YELLOW}Selección:${RESET} "
 
-# Read single character
 read -n 1 -s choice
 echo ""
 
-# Handle selection
 case "$choice" in
     [1-9])
         idx=$((choice - 1))
@@ -711,53 +807,43 @@ case "$choice" in
             echo "${session_names[$idx]}"
         fi
         ;;
-    [dD])
-        echo "__SEARCH_DIRS__"
-        ;;
-    [xX])
-        echo "__KILL_SESSION__"
-        ;;
-    [nN])
-        echo "__NEW_SESSION__"
-        ;;
-    [qQ])
-        exit 0
-        ;;
-    *)
-        exit 0
-        ;;
+    [dD]) echo "__SEARCH_DIRS__" ;;
+    [xX]) echo "__KILL_SESSION__" ;;
+    [nN]) echo "__NEW_SESSION__" ;;
+    *) exit 0 ;;
 esac
-POPUP_SCRIPT
-
-    chmod +x "$popup_script"
-
-    # Run popup and capture selection
-    local selected
-    if [[ -n "$TMUX" ]]; then
-        selected=$(tmux display-popup -w 80% -h 70% "$popup_script" "$current_session")
+' _ "$current_session" "$encoded_sessions" "$VERSION")
     else
-        selected=$("$popup_script" "$current_session")
+        # Fallback para fuera de tmux - mostrar mensaje
+        echo -e "${RED}Error: Must be run from within tmux${RESET}"
+        return 1
     fi
-
-    # Clean up
-    rm -f "$popup_script"
 
     # Handle selection
-    if [ "$selected" = "__SEARCH_DIRS__" ]; then
-        search_and_create_session
-    elif [ "$selected" = "__KILL_SESSION__" ]; then
-        # Show list to kill a session
-        local session_to_kill=$(tmux list-sessions -F "#{session_name}" | fzf --prompt="Kill session: " --height=40% --reverse --border=rounded)
-        if [ -n "$session_to_kill" ]; then
-            tmux confirm-before -p "Kill session $session_to_kill? (y/n)" "kill-session -t \"$session_to_kill\""
-        fi
-    elif [ "$selected" = "__NEW_SESSION__" ]; then
-        # Create new session
-        tmux command-prompt -p "New session name:" "new-session -ds '%%'; switch-client -t '%%'"
-    elif [ -n "$selected" ] && [ "$selected" != "$current_session" ]; then
-        log "Switching to session: $selected"
-        tmux switch-client -t "$selected"
-    fi
+    case "$selected" in
+        "__SEARCH_DIRS__")
+            search_and_create_session
+            ;;
+        "__KILL_SESSION__")
+            local sessions_list
+            sessions_list=$(_get_sessions)
+            local session_to_kill
+            session_to_kill=$(echo "$sessions_list" | fzf --prompt="Kill session: " --height=40% --reverse --border=rounded)
+            if [[ -n "$session_to_kill" ]]; then
+                tmux confirm-before -p "Kill session $session_to_kill? (y/n)" "kill-session -t \"$session_to_kill\""
+            fi
+            ;;
+        "__NEW_SESSION__")
+            tmux command-prompt -p "New session name:" "new-session -ds '%%'; switch-client -t '%%'"
+            ;;
+        ""|"$current_session")
+            # Nada o sesión actual seleccionada
+            ;;
+        *)
+            log "Switching to session: $selected"
+            tmux switch-client -t "$selected"
+            ;;
+    esac
 }
 
 # Search directories and create session
@@ -781,8 +867,9 @@ search_and_create_session() {
         return 0
     fi
 
-    # Create new session from directory
-    selected_name=$(basename "$selected" | tr . _)
+    # Create new session from directory (bash puro)
+    selected_name="${selected##*/}"
+    selected_name="${selected_name//./_}"
 
     if ! is_tmux_running; then
         tmux new-session -ds "$selected_name" -c "$selected"
@@ -1151,7 +1238,9 @@ if [[ ! -z $user_selected ]]; then
         selected="${BASH_REMATCH[1]}"
     fi
 
-    selected_name=$(basename "$selected" | tr . _)
+    # Extraer nombre de sesión (bash puro)
+    selected_name="${selected##*/}"
+    selected_name="${selected_name//./_}"
 
     if ! is_tmux_running; then
         tmux new-session -ds "$selected_name" -c "$selected"

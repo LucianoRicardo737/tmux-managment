@@ -1,0 +1,21 @@
+╔════════════════════════════════════════════════════════════════════════╗
+║                    Claude Code Notifications                           ║
+╚════════════════════════════════════════════════════════════════════════╝
+
+  [1] ● 14:32:45 - permission_prompt - development
+      "Claude wants to execute: npm install lodash"
+
+  [2] ● 14:28:12 - Stop - backend
+      "Task completed: Fixed authentication bug"
+
+  [3] ○ 14:15:33 - idle_prompt - frontend (read)
+      "Waiting for your input..."
+
+  [4] ○ 13:45:00 - Stop - devops (read)
+      "Deployment script finished"
+
+────────────────────────────────────────────────────────────────────────
+  ● = Unread   ○ = Read
+
+  [1-9] Select notification   [c] Clear read   [C] Clear all   [q] Quit
+────────────────────────────────────────────────────────────────────────

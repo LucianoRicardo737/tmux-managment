@@ -1,0 +1,16 @@
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │ > project                                                               │
+  │                                                                         │
+  │   [TMUX] development                                                    │
+  │   [TMUX] frontend                                                       │
+  │   ~/projects/my-app                                                     │
+  │   ~/projects/api-server                                                 │
+  │   ~/github/dotfiles                                                     │
+  │   ~/work/client-portal                                                  │
+  │                                                                         │
+  │  8/24 ────────────────────────────────────────────────────────────────  │
+  │                                                                         │
+  ├─────────────────────────────────────────────────────────────────────────┤
+  │  Select a directory to create a new tmux session                       │
+  │  [TMUX] = Existing session (will switch to it)                         │
+  └─────────────────────────────────────────────────────────────────────────┘

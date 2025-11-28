@@ -1,0 +1,29 @@
+# Cache directories
+.cache/
+
+# Claude internal files
+.claude/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# Editor directories
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local configuration (user-specific)
+*.local
+
+# Test output
+test-output/

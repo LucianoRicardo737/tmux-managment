@@ -1,0 +1,25 @@
+╔════════════════════════════════════════════════════════════════════════╗
+║                    Claude Code Notification                            ║
+╚════════════════════════════════════════════════════════════════════════╝
+
+Type: permission_prompt
+Time: 14:32:45
+
+Session: development
+Window:  claude (#2)
+Dir:     ~/projects/my-app
+
+────────────────────────────────────────────────────────────────────────
+Message:
+Claude wants to execute: npm install lodash
+
+Do you want to allow this action?
+────────────────────────────────────────────────────────────────────────
+
+Actions:
+  [1] Go to session (switch to Claude's window)
+  [2] View full details (JSON)
+  [3] Mark as read & close
+  [q] Close without marking as read
+
+Select action (1-3, q): _

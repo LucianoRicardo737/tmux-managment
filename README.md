@@ -1,581 +1,681 @@
-# tmux Session Switcher v2.0
+# tmux Session Switcher
 
-Switcher visual de sesiones tmux estilo Alt+Tab con integración completa de tmux-sessionizer para gestión avanzada de sesiones, búsqueda de directorios y comandos configurables.
+<p align="center">
+  <img src="https://img.shields.io/badge/version-2.1.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
+  <img src="https://img.shields.io/badge/tmux-3.2+-orange.svg" alt="tmux">
+  <img src="https://img.shields.io/badge/bash-4.0+-yellow.svg" alt="Bash">
+</p>
 
-## ✨ Características Principales
+<p align="center">
+  <strong>Alt+Tab style session switching for tmux with hierarchical navigation, session persistence, and Claude Code integration.</strong>
+</p>
 
-### 🚀 Modo Manager (Nuevo! - Recomendado)
-- **Menú nativo completo** con navegación jerárquica
-- **Ver ventanas dentro de cada sesión** en submenú
-- **Crear, renombrar, eliminar** sesiones desde el menú
-- **Crear ventanas y splits** sin salir del manager
-- **Cambiar entre ventanas** de una sesión específica
-- Indicadores visuales (● sesión actual, ○ sesión attached)
-- 100% nativo tmux - sin dependencias
+```
+╭─────────────────────────────────────────────────────────────╮
+│                    tmux Session Manager                      │
+╰─────────────────────────────────────────────────────────────╯
 
-### 🎯 Modo Popup
-- **Interfaz estilo Alt+Tab** con overlay centrado
-- **Selección rápida 1-9** sin navegación adicional
-- Búsqueda de directorios integrada (presiona `D`)
-- Indicadores visuales de estado
-- No requiere fzf
+  [1] ● development ─────────────────────────── (3 windows)
+      └─ windows >
 
-### 🔍 Modo FZF
-- Interfaz interactiva con preview de ventanas
-- Eliminar sesiones con `Ctrl+x`
-- Recargar lista con `Ctrl+r`
-- Búsqueda fuzzy y navegación con flechas
+  [2] ○ frontend ────────────────────────────── (2 windows)
+      └─ windows >
 
-### 📁 Búsqueda de Directorios (tmux-sessionizer)
-- Busca automáticamente en paths configurados
-- Crea sesiones nuevas desde directorios
-- Soporte para hydration scripts
-- Integración con proyectos existentes
+  [3]   backend ─────────────────────────────── (4 windows)
+      └─ windows >
 
-### ⚙️ Comandos de Sesión Configurables
-- Ejecuta comandos predefinidos en ventanas o splits
-- Splits cacheados y reutilizables
-- Configuración flexible por archivo
+─────────────────────────────────────────────────────────────
+  [n] New session    [r] Rename    [k] Kill session
+  [d] Search dirs    [q] Quit      [1-9] Switch
+─────────────────────────────────────────────────────────────
+```
 
-### 🔄 Navegación Rápida
-- Ciclar entre sesiones (next/prev)
-- Menú nativo como fallback
-- Múltiples keybindings configurables
+---
 
-## 📦 Instalación
+## Features
 
-### Instalación Automática (Recomendado)
+- **Session Manager** - Hierarchical menu with windows navigation
+- **Popup Switcher** - Quick 1-9 selection overlay
+- **FZF Integration** - Fuzzy search with live preview
+- **Directory Search** - Find projects and create sessions
+- **Session Persistence** - Auto-save/restore with tmux-resurrect
+- **Hydration Scripts** - Auto-setup windows per project
+- **Claude Code Integration** - Notifications when AI needs attention
+
+---
+
+## Quick Install
+
+### One Command Install
+
+```bash
+# Clone and install everything (base + persistence + Claude hooks)
+git clone https://github.com/yourusername/tmux-session-switcher.git
+cd tmux-session-switcher
+./install.sh --full
+```
+
+### Interactive Install
 
 ```bash
 ./install.sh
 ```
 
-Esto hará:
-- ✅ Instalar el script en `~/.local/bin/`
-- ✅ Crear directorios de configuración y cache
-- ✅ Copiar archivo de configuración ejemplo
-- ✅ Agregar keybindings a `~/.tmux.conf`
-- ✅ Recargar configuración de tmux automáticamente
+Shows a menu to choose what to install:
+1. **Full Install** - Everything included
+2. **Basic Install** - Core functionality only
+3. **Add Persistence** - tmux-resurrect/continuum
+4. **Add Claude Hooks** - Claude Code notifications
 
-### Instalación Manual
+### Requirements
 
-#### 1. Copiar el script
-
-```bash
-mkdir -p ~/.local/bin
-cp tmux-session-switcher.sh ~/.local/bin/
-chmod +x ~/.local/bin/tmux-session-switcher.sh
-```
-
-#### 2. Crear directorios
+- **tmux** >= 3.2 (for popup support)
+- **bash** >= 4.0
+- **git** (for tmux-resurrect)
+- **fzf** (optional, for fuzzy search)
+- **python3** (optional, for Claude hooks)
 
 ```bash
-mkdir -p ~/.config/tmux-sessionizer
-mkdir -p ~/.cache/tmux-sessionizer
-mkdir -p ~/.local/share/tmux-sessionizer
+# Ubuntu/Debian
+sudo apt install tmux git fzf
+
+# macOS
+brew install tmux git fzf
+
+# Arch
+sudo pacman -S tmux git fzf
 ```
 
-#### 3. Copiar configuración
+---
+
+## Keybindings Reference
+
+### Complete Keybindings Table
+
+| Shortcut | Mode | Action | Description |
+|----------|------|--------|-------------|
+| `Alt+m` | Manager | Session Manager | Hierarchical menu with windows |
+| `Alt+a` | Popup | Popup Switcher | Quick 1-9 session selection |
+| `Alt+s` | FZF | FZF Selector | Fuzzy search with preview |
+| `Alt+d` | Search | Directory Search | Find projects, create sessions |
+| `Alt+n` | Cycle | Next Session | Switch to next session |
+| `Alt+p` | Cycle | Previous Session | Switch to previous session |
+| `Alt+x` | Claude | Notification Queue | View Claude notifications |
+| `Prefix+Space` | Popup | Popup (Alt) | Alternative if Alt doesn't work |
+| `Prefix+a` | Manager | Manager (Alt) | Alternative if Alt doesn't work |
+| `Prefix+Ctrl+s` | Persist | Save Session | Manual session save |
+| `Prefix+Ctrl+r` | Persist | Restore Session | Manual session restore |
+
+### Controls Inside Menus
+
+**Session Manager (Alt+m):**
+| Key | Action |
+|-----|--------|
+| `1-9` | Switch to session |
+| `n` | New session |
+| `r` | Rename session |
+| `k` | Kill session |
+| `d` | Search directories |
+| `Enter` on "windows >" | Open windows submenu |
+| `q` / `Esc` | Close |
+
+**Window Submenu:**
+| Key | Action |
+|-----|--------|
+| `1-9` | Switch to window |
+| `n` | New window |
+| `h` | Horizontal split |
+| `v` | Vertical split |
+| `r` | Rename window |
+| `k` | Kill window |
+| `b` | Back to sessions |
+| `q` | Close |
+
+**Popup Switcher (Alt+a):**
+| Key | Action |
+|-----|--------|
+| `1-9` | Switch to session |
+| `D` | Open directory search |
+| `Q` / `Esc` | Close |
+
+**FZF Selector (Alt+s):**
+| Key | Action |
+|-----|--------|
+| `↑/↓` | Navigate |
+| `Enter` | Select session |
+| `Ctrl+x` | Delete session |
+| `Ctrl+r` | Reload list |
+| `Esc` | Cancel |
+
+---
+
+## Customizing Keybindings
+
+### Understanding tmux Keybinding Syntax
 
 ```bash
-cp config.example ~/.config/tmux-sessionizer/tmux-sessionizer.conf
+# Format: bind-key [flags] <key> <command>
+
+# -n = No prefix required (direct key)
+bind-key -n M-a run-shell "command"     # Alt+a (no prefix)
+
+# Without -n = Requires prefix (Ctrl+b by default)
+bind-key a run-shell "command"          # Prefix + a
+bind-key Space run-shell "command"      # Prefix + Space
+
+# Key modifiers:
+# M- = Alt/Meta
+# C- = Ctrl
+# S- = Shift
 ```
 
-#### 4. Configurar tmux
+### How to Customize
 
-Agrega estos keybindings a tu `~/.tmux.conf`:
+1. **Edit your tmux config:**
+   ```bash
+   nano ~/.tmux.conf
+   ```
+
+2. **Find the Session Switcher section** (added by installer)
+
+3. **Change keybindings as needed:**
+
+   ```bash
+   # Example: Change Alt+m to Alt+Tab (if your terminal supports it)
+   bind-key -n M-Tab run-shell "~/.local/bin/tmux-session-switcher.sh manager"
+
+   # Example: Use F-keys instead of Alt
+   bind-key -n F1 run-shell "~/.local/bin/tmux-session-switcher.sh manager"
+   bind-key -n F2 run-shell "~/.local/bin/tmux-session-switcher.sh popup"
+   bind-key -n F3 run-shell "~/.local/bin/tmux-session-switcher.sh fzf"
+
+   # Example: Use Prefix + key if Alt doesn't work
+   bind-key m run-shell "~/.local/bin/tmux-session-switcher.sh manager"
+   bind-key s run-shell "~/.local/bin/tmux-session-switcher.sh fzf"
+   ```
+
+4. **Reload tmux config:**
+   ```bash
+   tmux source-file ~/.tmux.conf
+   ```
+
+### Common Customization Examples
 
 ```bash
-# Alt+m - Session Manager (RECOMENDADO - menú completo con ventanas)
-bind-key -n M-m run-shell "~/.local/bin/tmux-session-switcher.sh show-menu '#{client_name}'"
+# ═══════════════════════════════════════════════════════════════════
+# CUSTOM KEYBINDINGS EXAMPLES
+# ═══════════════════════════════════════════════════════════════════
 
-# Alt+a - Popup switcher (estilo Alt-tab, 'a' = alt-tab alternative)
-# NOTA: Alt+Tab es capturado por el sistema, usa Alt+a
-bind-key -n M-a run-shell "~/.local/bin/tmux-session-switcher.sh popup"
+# Using Ctrl instead of Alt
+bind-key -n C-Space run-shell "~/.local/bin/tmux-session-switcher.sh popup"
 
-# Alt+s - Selector FZF completo
-bind-key -n M-s run-shell "tmux neww ~/.local/bin/tmux-session-switcher.sh fzf"
+# Using double-tap Prefix
+bind-key b run-shell "~/.local/bin/tmux-session-switcher.sh manager"
 
-# Alt+d - Buscar directorios y crear sesiones
-bind-key -n M-d run-shell "~/.local/bin/tmux-session-switcher.sh search"
+# Vim-style navigation
+bind-key -n M-j run-shell "~/.local/bin/tmux-session-switcher.sh next"
+bind-key -n M-k run-shell "~/.local/bin/tmux-session-switcher.sh prev"
 
-# Alt+n/p - Ciclar sesiones
-bind-key -n M-n run-shell "~/.local/bin/tmux-session-switcher.sh next"
-bind-key -n M-p run-shell "~/.local/bin/tmux-session-switcher.sh prev"
-
-# Alternativas con prefix:
-bind-key a run-shell "~/.local/bin/tmux-session-switcher.sh popup"         # Prefix + a
+# Quick commands with numbers
+bind-key -n M-1 run-shell "~/.local/bin/tmux-session-switcher.sh -s 0"
+bind-key -n M-2 run-shell "~/.local/bin/tmux-session-switcher.sh -s 1"
 ```
 
-#### 5. Recargar tmux
+---
+
+## Session Persistence
+
+### Automatic Save/Restore (Recommended)
+
+The installer can set up **tmux-resurrect** and **tmux-continuum** for automatic session persistence:
 
 ```bash
-tmux source-file ~/.tmux.conf
+./install.sh --resurrect
 ```
 
-## 🚀 Uso
+**What it does:**
+- Saves all sessions, windows, panes, and their contents
+- Auto-saves every 15 minutes
+- Auto-restores on tmux start
+- Preserves running programs (vim, htop, etc.)
 
-### Session Manager (Modo Recomendado)
+**Manual save/restore:**
+- `Prefix + Ctrl+s` - Save current state
+- `Prefix + Ctrl+r` - Restore last saved state
 
-**Atajo**: `Alt+a`
+### Hydration Scripts (Project-Specific)
 
-Popup interactivo con gestión completa:
-
-```
-╔══════════════════════════════════════════════════════════════╗
-║              SESSION MANAGER                                 ║
-╠══════════════════════════════════════════════════════════════╣
-
-  [1] ● development (4w)
-       ✓ editor
-         server
-         logs
-
-  [2] ○ frontend (3w)
-       ✓ code
-         terminal
-         docker
-
-  [3]   backend (2w)
-       ✓ api
-         database
-
-╠══════════════════════════════════════════════════════════════╣
-  [D] Buscar dirs   [X] Eliminar   [N] Nueva   [Q] Salir
-╚══════════════════════════════════════════════════════════════╝
-
-Selección: _
-```
-
-**Controles**:
-- `1-9`: Cambiar instantáneamente a esa sesión
-- `D`: Buscar directorios y crear nueva sesión
-- `X`: Eliminar sesión (muestra lista para seleccionar)
-- `N`: Crear nueva sesión (prompt para nombre)
-- `Q`: Cerrar el manager
-
-**Submenú de Ventanas**:
-Cuando seleccionas "└─ ventanas >" para una sesión:
-
-```
-╔═════════════════════════════════════════╗
-║        📁 development                   ║
-╠═════════════════════════════════════════╣
-║ ═══ VENTANAS ═══                        ║
-║                                         ║
-║ 1  ● editor (2p)                        ║
-║ 2    server (1p)                        ║
-║ 3    logs (1p)                          ║
-║ 4    terminal (1p)                      ║
-║                                         ║
-║ ═══ ACCIONES ═══                        ║
-║ n  + Nueva ventana                      ║
-║ r  ⎘ Renombrar ventana                  ║
-║ h  ⊟ Split horizontal                   ║
-║ v  ⊞ Split vertical                     ║
-║ k  ✕ Kill ventana                       ║
-║ b  ← Volver                             ║
-╚═════════════════════════════════════════╝
-```
-
-**Controles de Ventanas**:
-- `1-9`: Cambiar a ventana específica (y cambiar a la sesión)
-- `n`: Crear nueva ventana en esta sesión
-- `r`: Renombrar ventana actual
-- `h`: Crear split horizontal
-- `v`: Crear split vertical
-- `k`: Eliminar ventana (con confirmación)
-- `b`: Volver al menú principal
-
-**Símbolos**:
-- `●` = Activa/actual
-- `○` = Sesión con clientes conectados
-- `(Xw)` = Número de ventanas
-- `(Xp)` = Número de panes
-
-### Popup Switcher
-
-**Atajo**: `Alt+a` (también: `Prefix` + `Space` o `Prefix` + `a`)
-
-```
-╔════════════════════════════════════════════════════════╗
-║         TMUX SESSION SWITCHER                          ║
-╠════════════════════════════════════════════════════════╣
-
-  [1] ● development (4 ventanas)
-  [2] ○ frontend (3 ventanas)
-  [3]   backend (2 ventanas)
-  [4]   testing (1 ventana)
-
-╠════════════════════════════════════════════════════════╣
-  [D] Buscar directorios        [Q] Salir
-╚════════════════════════════════════════════════════════╝
-
-Selección: _
-```
-
-**Controles**:
-- `1-9`: Cambiar instantáneamente a esa sesión
-- `D`: Abrir búsqueda de directorios
-- `Q` o `Esc`: Cerrar el popup
-
-**Símbolos**:
-- `●` = Sesión actual (verde)
-- `○` = Sesión con clientes conectados (cyan)
-- ` ` = Sesión inactiva
-
-### Selector FZF
-
-**Atajo**: `Alt+s`
-
-Interfaz interactiva con preview:
-
-```
-Switch to session:
-  ● development (4 windows)
-  ○ frontend (3 windows)
-    backend (2 windows)
-    testing (1 window)
-
-[Preview Panel]
-  [1] editor ✓
-  [2] server
-  [3] logs
-  [4] terminal
-```
-
-**Controles**:
-- `↑/↓` o `Ctrl+j/k`: Navegar
-- `Enter`: Seleccionar sesión
-- `Ctrl+x`: Eliminar sesión seleccionada
-- `Ctrl+r`: Recargar lista
-- `Esc` o `Ctrl+c`: Cancelar
-
-### Búsqueda de Directorios
-
-**Atajo**: `Alt+d` o presiona `D` en el popup
-
-Busca en paths configurados y crea sesiones nuevas:
+Create `.tmux-sessionizer` in your project directory:
 
 ```bash
-# Busca automáticamente en:
-# - Sesiones tmux existentes ([TMUX] session-name)
-# - Directorios en TS_SEARCH_PATHS
-# - Directorios en TS_EXTRA_SEARCH_PATHS con depth custom
+# ~/projects/my-app/.tmux-sessionizer
+#!/bin/bash
 
-Select directory:
-> [TMUX] development
-  /home/user/projects/web-app
-  /home/user/projects/api-server
-  /home/user/github/dotfiles
+# Rename first window
+tmux rename-window "editor"
+tmux send-keys "nvim ." C-m
+
+# Create server window
+tmux new-window -n "server"
+tmux send-keys "npm run dev" C-m
+
+# Create test window
+tmux new-window -n "tests"
+tmux send-keys "npm test -- --watch" C-m
+
+# Go back to editor
+tmux select-window -t 1
 ```
 
-Al seleccionar un directorio:
-1. Se crea una sesión con el nombre del directorio
-2. Se ejecuta `.tmux-sessionizer` si existe (hydration)
-3. Se cambia automáticamente a la nueva sesión
+Make it executable:
+```bash
+chmod +x ~/projects/my-app/.tmux-sessionizer
+```
 
-### Ciclar entre Sesiones
+When you create a session from this directory (via Alt+d), the script runs automatically.
 
-**Atajos**: `Alt+n` (siguiente) / `Alt+p` (anterior)
+### Global Hydration Script
 
-Cambia a la siguiente/anterior sesión en orden alfabético.
-
-## ⚙️ Configuración
-
-### Archivo de Configuración
-
-**Ubicación**: `~/.config/tmux-sessionizer/tmux-sessionizer.conf`
+Create `~/.tmux-sessionizer` for default setup in all new sessions:
 
 ```bash
-# Search paths para directorios
+# ~/.tmux-sessionizer
+#!/bin/bash
+tmux rename-window "main"
+tmux send-keys "ls -la" C-m
+```
+
+---
+
+## Screenshots
+
+### Session Manager (Alt+m)
+
+```
+╭─────────────────────────────────────────────────────────────╮
+│                    tmux Session Manager                      │
+╰─────────────────────────────────────────────────────────────╯
+
+  [1] ● development ─────────────────────────── (3 windows)
+      └─ windows >
+
+  [2] ○ frontend ────────────────────────────── (2 windows)
+      └─ windows >
+
+  [3]   backend ─────────────────────────────── (4 windows)
+      └─ windows >
+
+─────────────────────────────────────────────────────────────
+  [n] New session    [r] Rename    [k] Kill session
+  [d] Search dirs    [q] Quit      [1-9] Switch
+─────────────────────────────────────────────────────────────
+
+● = Current session   ○ = Attached elsewhere
+```
+
+### Popup Switcher (Alt+a)
+
+```
+╭─────────────────────────────────────────────────────────────╮
+│                    tmux sessions                             │
+╰─────────────────────────────────────────────────────────────╯
+
+  [1] ● development ─────────────────────────── (3 windows)
+  [2] ○ frontend ────────────────────────────── (2 windows)
+  [3]   backend ─────────────────────────────── (4 windows)
+  [4]   devops ──────────────────────────────── (1 window)
+
+─────────────────────────────────────────────────────────────
+  Press 1-9 to switch   D = Search dirs   Q = Quit
+─────────────────────────────────────────────────────────────
+```
+
+### FZF Selector (Alt+s)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ > development                                                           │
+│   frontend                                                              │
+│   backend                                                               │
+│   devops                                                                │
+│                                                                         │
+│  4/4 ─────────────────────────────────────────────────────────────────  │
+├─────────────────────────────────────────────────────────────────────────┤
+│  Preview: development                                                   │
+│   1: editor* (2 panes) [nvim]                                          │
+│   2: server (1 pane) [npm run dev]                                     │
+│   3: tests (1 pane) [npm test]                                         │
+│  ─────────────────────────────────────────────────────────────────────  │
+│  Ctrl+x: Delete session   Ctrl+r: Reload   Enter: Select               │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Directory Search (Alt+d)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ > project                                                               │
+│                                                                         │
+│   [TMUX] development                                                    │
+│   [TMUX] frontend                                                       │
+│   ~/projects/my-app                                                     │
+│   ~/projects/api-server                                                 │
+│   ~/github/dotfiles                                                     │
+│                                                                         │
+│  8/24 ────────────────────────────────────────────────────────────────  │
+├─────────────────────────────────────────────────────────────────────────┤
+│  Select a directory to create a new tmux session                       │
+│  [TMUX] = Existing session (will switch to it)                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Claude Code Integration
+
+Real-time notifications when [Claude Code](https://claude.ai/code) needs your attention.
+
+### Installation
+
+```bash
+./install.sh --claude
+```
+
+Or add to existing installation:
+```bash
+./install.sh
+# Select option [4] Add Claude Code Hooks
+```
+
+### How It Works
+
+When working with Claude Code in one tmux session while doing other work:
+
+1. **Claude needs permission** → Popup appears + sound alert
+2. **Claude is waiting** → Popup appears + sound alert
+3. **Task completed** → Popup appears + sound alert
+
+You can:
+- Press `1` to jump directly to Claude's session
+- Press `2` to view full notification details
+- Press `3` to mark as read and close
+- Press `Alt+x` anytime to view notification queue
+
+### Notification Popup
+
+```
+╔════════════════════════════════════════════════════════════════════════╗
+║                    Claude Code Notification                            ║
+╚════════════════════════════════════════════════════════════════════════╝
+
+Type: permission_prompt
+Time: 14:32:45
+
+Session: development
+Window:  claude (#2)
+Dir:     ~/projects/my-app
+
+────────────────────────────────────────────────────────────────────────
+Message:
+Claude wants to execute: npm install lodash
+────────────────────────────────────────────────────────────────────────
+
+Actions:
+  [1] Go to session (switch to Claude's window)
+  [2] View full details (JSON)
+  [3] Mark as read & close
+  [q] Close without marking as read
+
+Select action (1-3, q): _
+```
+
+### Notification Queue (Alt+x)
+
+```
+╔════════════════════════════════════════════════════════════════════════╗
+║                    Claude Code Notifications                           ║
+╚════════════════════════════════════════════════════════════════════════╝
+
+  [1] ● 14:32:45 - permission_prompt - development
+      "Claude wants to execute: npm install lodash"
+
+  [2] ● 14:28:12 - Stop - backend
+      "Task completed: Fixed authentication bug"
+
+  [3] ○ 14:15:33 - idle_prompt - frontend (read)
+      "Waiting for your input..."
+
+────────────────────────────────────────────────────────────────────────
+  ● = Unread   ○ = Read
+
+  [1-9] Select notification   [c] Clear read   [C] Clear all   [q] Quit
+────────────────────────────────────────────────────────────────────────
+```
+
+### Notification Types
+
+| Type | Trigger | Description |
+|------|---------|-------------|
+| `permission_prompt` | Claude needs approval | Command execution permission |
+| `idle_prompt` | Claude waiting | Waiting for user input |
+| `elicitation_dialog` | MCP tool input | Tool requires information |
+| `error` | Error occurred | Something went wrong |
+| `Stop` | Task finished | Work completed |
+
+---
+
+## Configuration
+
+### Main Config File
+
+`~/.config/tmux-sessionizer/tmux-sessionizer.conf`:
+
+```bash
+# ═══════════════════════════════════════════════════════════════════
+# SEARCH PATHS - Where to look for projects
+# ═══════════════════════════════════════════════════════════════════
+
 TS_SEARCH_PATHS=(
     ~/
     ~/projects
     ~/work
+    ~/github
 )
 
-# Search paths adicionales con depth custom
+# Additional paths with custom depth (path:depth)
 TS_EXTRA_SEARCH_PATHS=(
-    ~/github:3
-    ~/git:3
-    ~/.config:2
+    ~/github:3        # Search 3 levels deep
+    ~/.config:2       # Search 2 levels deep
 )
 
-# Profundidad máxima de búsqueda (default: 1)
+# Default search depth
 TS_MAX_DEPTH=2
 
-# Comandos de sesión configurables
+# ═══════════════════════════════════════════════════════════════════
+# SESSION COMMANDS - Quick commands via -s flag
+# ═══════════════════════════════════════════════════════════════════
+
 TS_SESSION_COMMANDS=(
     "htop"                    # 0: System monitor
     "nvim ~/notes.md"         # 1: Quick notes
-    "python3"                 # 2: Python REPL
-    "lazygit"                 # 3: Git TUI
-    "docker ps -a"            # 4: Docker status
+    "lazygit"                 # 2: Git UI
+    "docker ps -a"            # 3: Docker status
+    "python3"                 # 4: Python REPL
 )
 
-# Logging para debug
-# TS_LOG="file"  # o "echo" para stdout
-# TS_LOG_FILE="$HOME/.local/share/tmux-sessionizer/tmux-sessionizer.logs"
+# ═══════════════════════════════════════════════════════════════════
+# LOGGING
+# ═══════════════════════════════════════════════════════════════════
+
+TS_LOG="file"  # "file", "echo", or empty
+TS_LOG_FILE="$HOME/.local/share/tmux-sessionizer/tmux-sessionizer.logs"
 ```
-
-Ver `config.example` para más ejemplos detallados.
-
-### Session Commands (Comandos Configurables)
-
-Los session commands permiten ejecutar comandos predefinidos en ventanas o splits persistentes.
-
-#### Uso Básico
-
-```bash
-# Ejecutar comando en ventana (índice 69+)
-tmux-session-switcher.sh -s 0
-
-# Ejecutar comando en split vertical (cacheado)
-tmux-session-switcher.sh -s 1 --vsplit
-
-# Ejecutar comando en split horizontal (cacheado)
-tmux-session-switcher.sh -s 2 --hsplit
-```
-
-#### Configurar Keybindings
-
-Agrega a `~/.tmux.conf`:
-
-```bash
-# Menú de comandos con Ctrl+b w
-bind-key w display-menu -T "Session Commands" \
-    "System Monitor"    0 "run-shell '~/.local/bin/tmux-session-switcher.sh -s 0'" \
-    "Notes (vsplit)"    1 "run-shell '~/.local/bin/tmux-session-switcher.sh -s 1 --vsplit'" \
-    "Python REPL"       2 "run-shell '~/.local/bin/tmux-session-switcher.sh -s 2 --hsplit'" \
-    "Git Client"        3 "run-shell '~/.local/bin/tmux-session-switcher.sh -s 3'"
-
-# Atajos directos (opcional)
-bind-key -n M-h run-shell "~/.local/bin/tmux-session-switcher.sh -s 0"  # Alt+h: htop
-bind-key -n M-g run-shell "~/.local/bin/tmux-session-switcher.sh -s 3"  # Alt+g: git
-```
-
-### Hydration Scripts
-
-Los hydration scripts permiten configurar automáticamente sesiones nuevas.
-
-#### Script Global
-
-Crea `~/.tmux-sessionizer`:
-
-```bash
-#!/bin/bash
-# Se ejecuta al crear cualquier sesión desde un directorio
-
-tmux rename-window "editor"
-tmux send-keys "nvim ." C-m
-tmux new-window -n "shell"
-tmux select-window -t 1
-```
-
-#### Script Por Proyecto
-
-Crea `.tmux-sessionizer` en el directorio del proyecto:
-
-```bash
-#!/bin/bash
-# Se ejecuta solo para este proyecto
-
-tmux rename-window "editor"
-tmux send-keys "nvim ." C-m
-
-tmux new-window -n "server"
-tmux send-keys "npm run dev" C-m
-
-tmux new-window -n "logs"
-tmux send-keys "tail -f logs/development.log" C-m
-
-tmux new-window -n "git"
-tmux send-keys "lazygit" C-m
-
-tmux select-window -t 1
-```
-
-**Nota**: Los scripts por proyecto tienen prioridad sobre el global.
-
-## 📚 Referencia de Comandos
-
-### Modos
-
-```bash
-tmux-session-switcher.sh [MODE] [OPTIONS]
-```
-
-| Modo | Descripción |
-|------|-------------|
-| `popup` | Popup overlay con selección numérica 1-9 (default) |
-| `fzf` | Selector interactivo con fzf y preview |
-| `menu` | Menú nativo de tmux |
-| `next` | Cambiar a siguiente sesión |
-| `prev` | Cambiar a sesión anterior |
-| `search` | Buscar directorios y crear sesión |
-
-### Options (Session Commands)
-
-| Opción | Descripción |
-|--------|-------------|
-| `-s <idx>` | Ejecutar `TS_SESSION_COMMANDS[idx]` |
-| `--vsplit` | Crear/usar split vertical (con `-s`) |
-| `--hsplit` | Crear/usar split horizontal (con `-s`) |
-| `-h, --help` | Mostrar ayuda |
-| `-v, --version` | Mostrar versión |
-
-### Ejemplos
-
-```bash
-# Popup switcher
-tmux-session-switcher.sh popup
-
-# FZF selector
-tmux-session-switcher.sh fzf
-
-# Búsqueda de directorios
-tmux-session-switcher.sh search
-
-# Ejecutar comando en ventana
-tmux-session-switcher.sh -s 0
-
-# Ejecutar comando en split vertical
-tmux-session-switcher.sh -s 1 --vsplit
-
-# Crear sesión desde path específico
-tmux-session-switcher.sh ~/projects/my-app
-```
-
-## 🔧 Troubleshooting
-
-### El popup no aparece
-
-- Requiere tmux 3.2+
-- Verifica: `tmux -V`
-- Actualiza tmux si es necesario
-
-### fzf no funciona
-
-- Instala fzf: `sudo apt install fzf` (Ubuntu/Debian)
-- O usa el modo popup que no requiere fzf
-
-### Alt+Tab/Ctrl no responde
-
-- **Alt+Tab es capturado por el sistema operativo** (window manager)
-- **Usa Alt+a en su lugar** (recomendado)
-- O usa `Prefix` + `Space` (Ctrl+b luego Space)
-- O usa `Prefix` + `a` (Ctrl+b luego a)
-- Alt+s (FZF mode) suele funcionar sin problemas
-
-### Los directorios no aparecen en búsqueda
-
-- Verifica `TS_SEARCH_PATHS` en el archivo de configuración
-- Los directorios deben existir
-- Revisa permisos de lectura
-
-### Los session commands no funcionan
-
-- Verifica `TS_SESSION_COMMANDS` en el archivo de configuración
-- Asegúrate de que los índices sean válidos
-- Revisa logs si está habilitado
-
-## 🎨 Personalización
-
-### Cambiar Keybindings
-
-Edita `~/.tmux.conf` y modifica los keybindings:
-
-```bash
-# Usar Alt+w en lugar de Alt+a
-bind-key -n M-w run-shell "~/.local/bin/tmux-session-switcher.sh popup"
-
-# Usar F12 para búsqueda
-bind-key -n F12 run-shell "~/.local/bin/tmux-session-switcher.sh search"
-
-# Usar Alt+` (backtick) para popup
-bind-key -n 'M-`' run-shell "~/.local/bin/tmux-session-switcher.sh popup"
-
-# Usar Prefix + Tab
-bind-key Tab run-shell "~/.local/bin/tmux-session-switcher.sh popup"
-```
-
-### Personalizar Search Paths
-
-Edita `~/.config/tmux-sessionizer/tmux-sessionizer.conf`:
-
-```bash
-# Buscar solo en proyectos específicos
-TS_SEARCH_PATHS=(
-    ~/projects
-    ~/work
-)
-
-# Agregar paths con depth custom
-TS_EXTRA_SEARCH_PATHS=(
-    ~/github:3        # Buscar 3 niveles de profundidad
-    ~/.config:2       # Buscar 2 niveles
-)
-
-# Cambiar depth por defecto
-TS_MAX_DEPTH=3
-```
-
-### Agregar Session Commands
-
-Edita `~/.config/tmux-sessionizer/tmux-sessionizer.conf`:
-
-```bash
-TS_SESSION_COMMANDS=(
-    "htop"                              # System monitor
-    "nvim ~/TODO.md"                    # Quick notes
-    "lazygit"                           # Git TUI
-    "docker logs -f \$(docker ps -q | head -1)"  # Docker logs
-    "k9s"                               # Kubernetes TUI
-    "python3 -m http.server 8000"       # Local server
-)
-```
-
-## 📖 Documentación Adicional
-
-- **QUICKSTART.md** - Guía rápida de inicio
-- **CHEATSHEET.md** - Referencia rápida de comandos
-- **tmux.conf.example** - Ejemplos de configuración
-- **config.example** - Ejemplos de configuración avanzada
-
-## 🤝 Contribuir
-
-Las contribuciones son bienvenidas! Por favor:
-
-1. Reporta bugs en Issues
-2. Propón nuevas funcionalidades
-3. Envía pull requests con mejoras
-
-## 📄 Licencia
-
-Este proyecto es de código abierto y está disponible bajo la licencia MIT.
-
-## 🙏 Agradecimientos
-
-- Inspirado por [tmux-sessionizer](https://github.com/ThePrimeagen/.dotfiles/blob/master/bin/.local/scripts/tmux-sessionizer) de ThePrimeagen
-- Interfaz fzf inspirada en [t-smart-tmux-session-manager](https://github.com/joshmedeski/t-smart-tmux-session-manager)
-
-## 📊 Características vs Otros Proyectos
-
-| Característica | tmux-session-switcher v2 | tmux-sessionizer | t-smart |
-|----------------|--------------------------|------------------|---------|
-| Popup overlay visual | ✅ | ❌ | ✅ |
-| Selección numérica 1-9 | ✅ | ❌ | ❌ |
-| FZF con preview | ✅ | ❌ | ✅ |
-| Búsqueda de directorios | ✅ | ✅ | ✅ |
-| Hydration scripts | ✅ | ✅ | ❌ |
-| Session commands | ✅ | ✅ | ❌ |
-| Split management | ✅ | ✅ | ❌ |
-| Sin dependencias (popup) | ✅ | ❌ | ❌ |
-| Múltiples modos | ✅ | ❌ | ✅ |
 
 ---
 
-**Versión**: 2.0.0
-**Autor**: Claude Code
-**Repositorio**: [github.com/your-repo/tmux-session-switcher](https://github.com)
+## CLI Reference
+
+```bash
+tmux-session-switcher.sh [MODE] [OPTIONS]
+
+MODES:
+  manager         Session manager with hierarchical windows
+  popup           Quick popup switcher (default)
+  fzf             FZF selector with preview
+  menu            Native tmux menu
+  search          Directory search
+  next            Switch to next session
+  prev            Switch to previous session
+  <path>          Create session from directory path
+
+OPTIONS:
+  -s, --session-cmd <idx>    Execute session command by index
+  --vsplit                   Run command in vertical split
+  --hsplit                   Run command in horizontal split
+  -v, --version              Show version
+  -h, --help                 Show help
+
+EXAMPLES:
+  tmux-session-switcher.sh manager
+  tmux-session-switcher.sh ~/projects/my-app
+  tmux-session-switcher.sh -s 0 --vsplit
+```
+
+---
+
+## Troubleshooting
+
+### Popup doesn't appear
+
+```bash
+# Check tmux version (needs 3.2+)
+tmux -V
+
+# If older, popups fall back to FZF mode automatically
+```
+
+### Alt key not working
+
+Some terminals capture Alt. Use prefix-based bindings:
+
+```bash
+# Edit ~/.tmux.conf and use:
+bind-key a run-shell "~/.local/bin/tmux-session-switcher.sh popup"
+bind-key Space run-shell "~/.local/bin/tmux-session-switcher.sh popup"
+
+# Then use: Ctrl+b a  or  Ctrl+b Space
+```
+
+### Claude notifications not working
+
+```bash
+# Check hook logs
+cat ~/.cache/claude-notifications/hook-debug.log
+
+# Verify hook configuration
+cat ~/.claude/settings.local.json
+
+# Test manually
+echo '{"hook_event_name": "Stop", "cwd": "'$PWD'"}' | \
+  python3 ~/.claude/hooks/tmux-notification.py
+```
+
+### Session persistence not working
+
+```bash
+# Install plugins (inside tmux)
+# Press: Prefix + I
+
+# Check TPM is installed
+ls ~/.tmux/plugins/tpm
+
+# Manual save/restore
+# Prefix + Ctrl+s = Save
+# Prefix + Ctrl+r = Restore
+```
+
+### No sound on notifications
+
+Enable terminal bell in your terminal:
+
+- **GNOME Terminal**: Preferences → Profile → Text → Terminal bell
+- **Konsole**: Settings → Profile → Terminal Features → System bell
+- **iTerm2**: Preferences → Profiles → Terminal → Bell
+
+Test: `printf '\a'`
+
+---
+
+## Examples
+
+See the `examples/` directory:
+
+```bash
+# Run basic demo (creates test sessions)
+./examples/demo.sh
+
+# Run advanced demo with hydration
+./examples/demo-advanced.sh
+
+# Clean up demo sessions
+./examples/demo-advanced.sh --clean
+```
+
+---
+
+## File Structure
+
+```
+~/.local/bin/
+└── tmux-session-switcher.sh     # Main script
+
+~/.config/tmux-sessionizer/
+└── tmux-sessionizer.conf        # Configuration
+
+~/.tmux/plugins/
+├── tpm/                         # Plugin manager
+├── tmux-resurrect/              # Session persistence
+└── tmux-continuum/              # Auto-save
+
+~/.claude/hooks/                 # Claude Code integration
+├── tmux-notification.py
+├── claude-popup.sh
+└── notification-queue.sh
+
+~/.cache/
+├── tmux-sessionizer/            # Session cache
+└── claude-notifications/        # Notification cache
+```
+
+---
+
+## Contributing
+
+Contributions welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+---
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+## Credits
+
+- Inspired by [tmux-sessionizer](https://github.com/ThePrimeagen/.dotfiles) by ThePrimeagen
+- Session persistence via [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect)
+- Fuzzy finding via [fzf](https://github.com/junegunn/fzf)
+- AI integration for [Anthropic's Claude](https://claude.ai)
+
+---
+
+<p align="center">
+  Made with love for the tmux community
+</p>
