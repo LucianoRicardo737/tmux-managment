@@ -9,7 +9,7 @@ Referencia rápida de todos los comandos, atajos y funcionalidades.
 | Atajo | Acción | Descripción |
 |-------|--------|-------------|
 | `Alt+m` | Session Manager | **RECOMENDADO** - Menú completo con ventanas jerárquicas |
-| `Alt+a` | Popup Switcher | Overlay con selección 1-9 ('a' = alt-tab alternative) |
+| `Alt+a` | **Hierarchical** | **RECOMENDADO** - FZF con sesiones + ventanas navegables |
 | `Alt+s` | FZF Selector | Selector completo con fzf y preview |
 | `Alt+d` | Search Directories | Buscar directorios y crear sesiones |
 | `Alt+n` | Next Session | Cambiar a siguiente sesión |
@@ -25,13 +25,19 @@ Referencia rápida de todos los comandos, atajos y funcionalidades.
 | `Alt+h` | Quick Command | Comando rápido (ejemplo: htop) |
 | `Alt+g` | Git Command | Comando git (ejemplo: lazygit) |
 
-### Controles en Popup Switcher
+### Controles en Hierarchical Switcher (Alt+a) - RECOMENDADO
 
 | Tecla | Acción |
 |-------|--------|
-| `1-9` | Seleccionar sesión por número |
-| `D` | Abrir búsqueda de directorios |
-| `Q` o `Esc` | Cerrar popup |
+| `↑/↓` | Navegar entre sesiones y ventanas |
+| `Enter` | Ir a sesión/ventana seleccionada |
+| `Ctrl+n` | Nueva sesión |
+| `Ctrl+w` | Nueva ventana en sesión seleccionada |
+| `Ctrl+x` | Eliminar sesión/ventana |
+| `Ctrl+r` | Renombrar sesión/ventana |
+| `Ctrl+v` | Split vertical |
+| `Ctrl+h` | Split horizontal |
+| `Esc` | Cerrar |
 
 ### Controles en FZF Selector
 
@@ -225,17 +231,23 @@ TS_MAX_DEPTH=1
 
 ## 📋 Workflows Comunes
 
-### Workflow 1: Desarrollo Rápido
+### Workflow 1: Navegación Rápida (RECOMENDADO)
 
 ```bash
-# 1. Abrir popup
+# 1. Abrir hierarchical switcher
 Alt+a
 
-# 2. Si existe la sesión, presionar número
-Presionar 1-9
+# 2. Navegar con flechas entre sesiones y ventanas
+↑/↓
 
-# 3. Si no existe, buscar directorio
-Presionar D → Buscar proyecto → Enter
+# 3. Ir a la selección
+Enter
+
+# 4. Crear nueva sesión
+Ctrl+n → Escribir nombre → Enter
+
+# 5. Crear nueva ventana
+Ctrl+w → Escribir nombre → Enter
 ```
 
 ### Workflow 2: Session Manager (Gestión Completa)
@@ -434,5 +446,5 @@ bind-key m display-menu -T "My Workflows" \
 
 ---
 
-**Versión**: 2.0.0
-**Última actualización**: 2025
+**Versión**: 2.1.0
+**Última actualización**: 2025-12-09

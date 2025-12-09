@@ -95,8 +95,8 @@ sudo pacman -S tmux git fzf
 
 | Shortcut | Mode | Action | Description |
 |----------|------|--------|-------------|
-| `Alt+m` | Manager | Session Manager | Hierarchical menu with windows |
-| `Alt+a` | Popup | Popup Switcher | Quick 1-9 session selection |
+| `Alt+m` | Manager | Session Manager | Native tmux menu with windows |
+| `Alt+a` | Hierarchical | **Recommended** | FZF with sessions + windows navigation |
 | `Alt+s` | FZF | FZF Selector | Fuzzy search with preview |
 | `Alt+d` | Search | Directory Search | Find projects, create sessions |
 | `Alt+n` | Cycle | Next Session | Switch to next session |
@@ -132,12 +132,18 @@ sudo pacman -S tmux git fzf
 | `b` | Back to sessions |
 | `q` | Close |
 
-**Popup Switcher (Alt+a):**
+**Hierarchical Switcher (Alt+a) - RECOMMENDED:**
 | Key | Action |
 |-----|--------|
-| `1-9` | Switch to session |
-| `D` | Open directory search |
-| `Q` / `Esc` | Close |
+| `↑/↓` | Navigate sessions and windows |
+| `Enter` | Go to selected session/window |
+| `Ctrl+n` | New session |
+| `Ctrl+w` | New window in selected session |
+| `Ctrl+x` | Delete session/window |
+| `Ctrl+r` | Rename session/window |
+| `Ctrl+v` | Vertical split |
+| `Ctrl+h` | Horizontal split |
+| `Esc` | Close |
 
 **FZF Selector (Alt+s):**
 | Key | Action |

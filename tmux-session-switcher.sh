@@ -730,16 +730,16 @@ switch_with_popup() {
         encoded_sessions+="${session_names[$i]}|${session_windows_count[$i]}|${session_attached[$i]}|${session_windows_data[$i]}"$'\x1E'
     done
 
-    # Ejecutar popup inline con bash -c (sin archivo temporal)
-    local selected
+    # Ejecutar popup - las acciones se ejecutan DENTRO del popup
     if [[ -n "$TMUX" ]]; then
-        selected=$(tmux display-popup -w 80% -h 70% -E bash -c '
+        tmux display-popup -w 80% -h 70% -E bash -c '
 # Colores
 CYAN="\033[0;36m"; GREEN="\033[0;32m"; YELLOW="\033[1;33m"
 RED="\033[0;31m"; BOLD="\033[1m"; DIM="\033[2m"; RESET="\033[0m"
 
 current_session="$1"
 encoded_data="$2"
+script_path="$4"
 
 # Decodificar sesiones
 declare -a session_names=()
@@ -792,7 +792,8 @@ for i in "${!session_names[@]}"; do
 done
 
 echo -e "${BOLD}${CYAN}╠══════════════════════════════════════════════════════════════╣${RESET}"
-echo -e "  ${BOLD}[D]${RESET} Buscar dirs   ${BOLD}[X]${RESET} Eliminar   ${BOLD}[N]${RESET} Nueva   ${BOLD}[Q]${RESET} Salir"
+echo -e "  ${BOLD}[n]${RESET} sesión  ${BOLD}[w]${RESET} ventana  ${BOLD}[v]${RESET} vsplit  ${BOLD}[h]${RESET} hsplit  ${BOLD}[d]${RESET} dirs"
+echo -e "  ${BOLD}[x]${RESET} eliminar                                      ${BOLD}[q]${RESET} salir"
 echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════════════════════════╝${RESET}"
 echo ""
 echo -ne "${YELLOW}Selección:${RESET} "
@@ -804,46 +805,68 @@ case "$choice" in
     [1-9])
         idx=$((choice - 1))
         if [ $idx -lt ${#session_names[@]} ]; then
-            echo "${session_names[$idx]}"
+            tmux switch-client -t "${session_names[$idx]}"
         fi
         ;;
-    [dD]) echo "__SEARCH_DIRS__" ;;
-    [xX]) echo "__KILL_SESSION__" ;;
-    [nN]) echo "__NEW_SESSION__" ;;
-    *) exit 0 ;;
+    [dD])
+        # Buscar directorios con fzf
+        selected=$(find ~/projects ~/work ~/.config ~/ -maxdepth 2 -type d 2>/dev/null | fzf --prompt="Directorio: " --height=100% --reverse)
+        if [[ -n "$selected" ]]; then
+            name="${selected##*/}"
+            name="${name//./_}"
+            tmux new-session -ds "$name" -c "$selected" 2>/dev/null
+            tmux switch-client -t "$name"
+        fi
+        ;;
+    [xX])
+        # Eliminar sesión
+        sessions=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | sort)
+        selected=$(echo "$sessions" | fzf --prompt="Eliminar: " --height=100% --reverse)
+        if [[ -n "$selected" ]]; then
+            echo -ne "${RED}¿Eliminar $selected? [s/n]:${RESET} "
+            read -n 1 confirm
+            echo
+            if [[ "$confirm" == "s" || "$confirm" == "y" ]]; then
+                tmux kill-session -t "$selected" 2>/dev/null
+            fi
+        fi
+        ;;
+    [nN])
+        # Nueva sesión
+        echo -ne "${YELLOW}Nombre de nueva sesión:${RESET} "
+        read -r name
+        if [[ -n "$name" ]]; then
+            tmux new-session -ds "$name" 2>/dev/null
+            tmux switch-client -t "$name"
+        fi
+        ;;
+    [wW])
+        # Nueva ventana en sesión actual
+        echo -ne "${YELLOW}Nombre de ventana:${RESET} "
+        read -r wname
+        if [[ -n "$wname" ]]; then
+            tmux new-window -n "$wname"
+        else
+            tmux new-window
+        fi
+        ;;
+    [vV])
+        # Split vertical
+        tmux split-window -h
+        ;;
+    [hH])
+        # Split horizontal
+        tmux split-window -v
+        ;;
+    *)
+        exit 0
+        ;;
 esac
-' _ "$current_session" "$encoded_sessions" "$VERSION")
+' _ "$current_session" "$encoded_sessions" "$VERSION" "$SCRIPT_PATH"
     else
-        # Fallback para fuera de tmux - mostrar mensaje
         echo -e "${RED}Error: Must be run from within tmux${RESET}"
         return 1
     fi
-
-    # Handle selection
-    case "$selected" in
-        "__SEARCH_DIRS__")
-            search_and_create_session
-            ;;
-        "__KILL_SESSION__")
-            local sessions_list
-            sessions_list=$(_get_sessions)
-            local session_to_kill
-            session_to_kill=$(echo "$sessions_list" | fzf --prompt="Kill session: " --height=40% --reverse --border=rounded)
-            if [[ -n "$session_to_kill" ]]; then
-                tmux confirm-before -p "Kill session $session_to_kill? (y/n)" "kill-session -t \"$session_to_kill\""
-            fi
-            ;;
-        "__NEW_SESSION__")
-            tmux command-prompt -p "New session name:" "new-session -ds '%%'; switch-client -t '%%'"
-            ;;
-        ""|"$current_session")
-            # Nada o sesión actual seleccionada
-            ;;
-        *)
-            log "Switching to session: $selected"
-            tmux switch-client -t "$selected"
-            ;;
-    esac
 }
 
 # Search directories and create session
