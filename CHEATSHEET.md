@@ -1,4 +1,4 @@
-# tmux Session Switcher v2.0 - Cheat Sheet
+# tmux Session Switcher v2.2 - Cheat Sheet
 
 Referencia rápida de todos los comandos, atajos y funcionalidades.
 
@@ -446,5 +446,5 @@ bind-key m display-menu -T "My Workflows" \
 
 ---
 
-**Versión**: 2.1.0
-**Última actualización**: 2025-12-09
+**Versión**: 2.2.0
+**Última actualización**: 2025-12-10

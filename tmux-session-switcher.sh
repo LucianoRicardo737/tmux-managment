@@ -7,7 +7,7 @@
 
 # Note: Not using 'set -e' to allow interactive menus to handle errors gracefully
 
-VERSION="2.1.0"
+VERSION="2.2.0"
 
 # Get script path at the beginning
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"

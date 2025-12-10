@@ -1,7 +1,7 @@
 # tmux Session Switcher
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.1.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-2.2.0-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
   <img src="https://img.shields.io/badge/tmux-3.2+-orange.svg" alt="tmux">
   <img src="https://img.shields.io/badge/bash-4.0+-yellow.svg" alt="Bash">
@@ -35,8 +35,8 @@
 
 ## Features
 
-- **Session Manager** - Hierarchical menu with windows navigation
-- **Popup Switcher** - Quick 1-9 selection overlay
+- **Hierarchical Switcher** - FZF-based navigation of sessions + windows (recommended)
+- **Session Manager** - Native tmux menu with windows navigation
 - **FZF Integration** - Fuzzy search with live preview
 - **Directory Search** - Find projects and create sessions
 - **Session Persistence** - Auto-save/restore with tmux-resurrect
@@ -102,7 +102,7 @@ sudo pacman -S tmux git fzf
 | `Alt+n` | Cycle | Next Session | Switch to next session |
 | `Alt+p` | Cycle | Previous Session | Switch to previous session |
 | `Alt+x` | Claude | Notification Queue | View Claude notifications |
-| `Prefix+Space` | Popup | Popup (Alt) | Alternative if Alt doesn't work |
+| `Prefix+Space` | Hierarchical | Hierarchical (Alt) | Alternative if Alt doesn't work |
 | `Prefix+a` | Manager | Manager (Alt) | Alternative if Alt doesn't work |
 | `Prefix+Ctrl+s` | Persist | Save Session | Manual session save |
 | `Prefix+Ctrl+r` | Persist | Restore Session | Manual session restore |
@@ -320,22 +320,24 @@ tmux send-keys "ls -la" C-m
 ● = Current session   ○ = Attached elsewhere
 ```
 
-### Popup Switcher (Alt+a)
+### Hierarchical Switcher (Alt+a) - RECOMMENDED
 
 ```
-╭─────────────────────────────────────────────────────────────╮
-│                    tmux sessions                             │
-╰─────────────────────────────────────────────────────────────╯
+> [+] Nueva sesión
+  ● development (3w)
+    ✓ [0] editor (2p)
+      [1] server (1p)
+      [2] tests (1p)
+  ○ frontend (2w)
+    ✓ [0] main (1p)
+      [1] styles (1p)
+    backend (4w)
 
-  [1] ● development ─────────────────────────── (3 windows)
-  [2] ○ frontend ────────────────────────────── (2 windows)
-  [3]   backend ─────────────────────────────── (4 windows)
-  [4]   devops ──────────────────────────────── (1 window)
-
-─────────────────────────────────────────────────────────────
-  Press 1-9 to switch   D = Search dirs   Q = Quit
-─────────────────────────────────────────────────────────────
+  Enter=ir | ^n=sesión | ^w=ventana | ^r=rename | ^x=eliminar | ^v/h=split
 ```
+
+**Nota:** Las ventanas genéricas (bash, zsh, fish, sh) se ocultan automáticamente.
+Si una sesión tiene solo 1 ventana real, no se muestra la lista de ventanas.
 
 ### FZF Selector (Alt+s)
 
