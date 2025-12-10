@@ -422,12 +422,19 @@ switch_with_fzf_hierarchical() {
         # Windows under this session (usando caché)
         local win_list
         win_list=$(_get_windows "$name" "#{window_index}|#{window_name}|#{window_panes}|#{window_active}")
-        # Only process windows if we have data
+        # Filtrar ventanas: excluir shells genéricos y solo mostrar si hay >1 ventana real
+        local real_windows=0
+        local win_lines=""
         [[ -n "$win_list" ]] && while IFS='|' read -r idx wname panes active; do
+            # Saltar shells genéricos
+            [[ "$wname" =~ ^(bash|zsh|fish|sh)$ ]] && continue
             local wmarker="  "
             [[ "$active" == "1" ]] && wmarker="${GREEN}✓${RESET} "
-            formatted+="WINDOW::${name}::${idx}::  ${wmarker}[${idx}] ${wname} ${DIM}(${panes}p)${RESET}\n"
+            win_lines+="WINDOW::${name}::${idx}::  ${wmarker}[${idx}] ${wname} ${DIM}(${panes}p)${RESET}\n"
+            ((real_windows++))
         done <<< "$win_list"
+        # Solo mostrar ventanas si hay más de 1 real
+        [[ $real_windows -gt 1 ]] && formatted+="$win_lines"
     done <<< "$sessions"
 
     # Select with fzf with action keys
