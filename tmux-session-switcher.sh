@@ -476,7 +476,7 @@ switch_with_fzf_hierarchical() {
     case "$key" in
         ctrl-n)
             # Create new session
-            tmux command-prompt -p "Nueva sesión:" "new-session -ds '%%'; switch-client -t '%%'"
+            tmux command-prompt -p "Nueva sesión:" "new-session -d -s '%%' ; switch-client -t '%%'"
             ;;
         ctrl-w)
             # Create new window in selected session
@@ -538,7 +538,7 @@ switch_with_fzf_hierarchical() {
                 ACTION)
                     # Create new session action
                     if [ "$session_name" = "new" ]; then
-                        tmux command-prompt -p "Nueva sesión:" "new-session -ds '%%'; switch-client -t '%%'"
+                        tmux command-prompt -p "Nueva sesión:" "run-shell 'tmux new-session -d -s \"%%\" && tmux switch-client -t \"%%\"'"
                     fi
                     ;;
                 SEPARATOR)
@@ -821,7 +821,8 @@ case "$choice" in
         if [[ -n "$selected" ]]; then
             name="${selected##*/}"
             name="${name//./_}"
-            tmux new-session -ds "$name" -c "$selected" 2>/dev/null
+            tmux new-session -d -s "$name" -c "$selected" 2>/dev/null && \
+            sleep 0.1 && \
             tmux switch-client -t "$name"
         fi
         ;;
@@ -843,7 +844,8 @@ case "$choice" in
         echo -ne "${YELLOW}Nombre de nueva sesión:${RESET} "
         read -r name
         if [[ -n "$name" ]]; then
-            tmux new-session -ds "$name" 2>/dev/null
+            tmux new-session -d -s "$name" 2>/dev/null && \
+            sleep 0.1 && \
             tmux switch-client -t "$name"
         fi
         ;;
