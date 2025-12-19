@@ -134,11 +134,28 @@ install_base() {
 # Added on $(date)
 # ═══════════════════════════════════════════════════════════════════════════
 
+# Change prefix to Ctrl+a
+unbind C-b
+set -g prefix C-a
+bind C-a send-prefix
+
+# Enable mouse support
+set -g mouse on
+
+# Switch to new session when created
+set-hook -g session-created 'switch-client -t "#{hook_session}"'
+
+# Resize panes with Alt + arrow keys (hold Alt and press arrows)
+bind-key -n M-Up resize-pane -U 2
+bind-key -n M-Down resize-pane -D 2
+bind-key -n M-Left resize-pane -L 2
+bind-key -n M-Right resize-pane -R 2
+
 # Session Manager (hierarchical menu with windows)
 bind-key -n M-m run-shell "$SCRIPT_PATH manager"
 
-# Popup Switcher (quick 1-9 selection)
-bind-key -n M-a run-shell "$SCRIPT_PATH popup"
+# Hierarchical Switcher (sessions + windows with fzf)
+bind-key -n M-a run-shell "tmux neww $SCRIPT_PATH hierarchical"
 
 # FZF Selector (fuzzy search with preview)
 bind-key -n M-s run-shell "tmux neww $SCRIPT_PATH fzf"
@@ -151,7 +168,7 @@ bind-key -n M-n run-shell "$SCRIPT_PATH next"
 bind-key -n M-p run-shell "$SCRIPT_PATH prev"
 
 # Prefix alternatives (if Alt doesn't work)
-bind-key Space run-shell "$SCRIPT_PATH popup"
+bind-key Space run-shell "tmux neww $SCRIPT_PATH hierarchical"
 bind-key a run-shell "$SCRIPT_PATH manager"
 EOF
         echo -e "${GREEN}  ✓ Keybindings added to $TMUX_CONF${RESET}"
@@ -176,57 +193,36 @@ EOF
 install_resurrect() {
     echo -e "\n${CYAN}${BOLD}[2/4] Installing session persistence (tmux-resurrect)...${RESET}"
 
-    # Install TPM if not present
-    if [ ! -d "$TPM_DIR" ]; then
-        echo -e "${DIM}  Installing TPM (Tmux Plugin Manager)...${RESET}"
-        git clone https://github.com/tmux-plugins/tpm "$TPM_DIR" 2>/dev/null
-        echo -e "${GREEN}  ✓ TPM installed${RESET}"
+    RESURRECT_DIR="$HOME/.tmux/plugins/tmux-resurrect"
+
+    # Install tmux-resurrect if not present
+    if [ ! -d "$RESURRECT_DIR" ]; then
+        echo -e "${DIM}  Installing tmux-resurrect...${RESET}"
+        mkdir -p "$HOME/.tmux/plugins"
+        git clone https://github.com/tmux-plugins/tmux-resurrect "$RESURRECT_DIR" 2>/dev/null
+        echo -e "${GREEN}  ✓ tmux-resurrect installed${RESET}"
     else
-        echo -e "${GREEN}  ✓ TPM already installed${RESET}"
+        echo -e "${GREEN}  ✓ tmux-resurrect already installed${RESET}"
     fi
 
-    # Add plugins to tmux.conf if not present
-    if ! grep -q "tmux-plugins/tmux-resurrect" "$TMUX_CONF" 2>/dev/null; then
+    # Add resurrect to tmux.conf if not present
+    if ! grep -q "tmux-resurrect" "$TMUX_CONF" 2>/dev/null; then
         cat >> "$TMUX_CONF" << 'EOF'
 
-# ═══════════════════════════════════════════════════════════════════════════
-# Session Persistence (tmux-resurrect + tmux-continuum)
-# ═══════════════════════════════════════════════════════════════════════════
-
-# Plugin manager
-set -g @plugin 'tmux-plugins/tpm'
-
-# Session save/restore
-set -g @plugin 'tmux-plugins/tmux-resurrect'
-set -g @plugin 'tmux-plugins/tmux-continuum'
-
-# Resurrect settings
-set -g @resurrect-capture-pane-contents 'on'
-set -g @resurrect-strategy-nvim 'session'
-
-# Continuum settings (auto-save every 15 min, auto-restore on start)
-set -g @continuum-restore 'on'
-set -g @continuum-save-interval '15'
-
-# Keybindings for manual save/restore
-# Prefix + Ctrl+s = Save
-# Prefix + Ctrl+r = Restore
-
-# Initialize TPM (keep this at the very end of tmux.conf)
-run '~/.tmux/plugins/tpm/tpm'
+# tmux-resurrect: save/restore sessions
+# Prefix + Ctrl+s = save
+# Prefix + Ctrl+r = restore
+run-shell ~/.tmux/plugins/tmux-resurrect/resurrect.tmux
 EOF
-        echo -e "${GREEN}  ✓ Persistence plugins added to tmux.conf${RESET}"
-        echo -e "${YELLOW}  ⚠ Run 'Prefix + I' inside tmux to install plugins${RESET}"
+        echo -e "${GREEN}  ✓ tmux-resurrect added to tmux.conf${RESET}"
     else
-        echo -e "${YELLOW}  ⚠ Persistence plugins already configured${RESET}"
+        echo -e "${YELLOW}  ⚠ tmux-resurrect already configured${RESET}"
     fi
 
     echo ""
     echo -e "${CYAN}Session Persistence Keybindings:${RESET}"
     echo "  Prefix + Ctrl+s  = Save session"
     echo "  Prefix + Ctrl+r  = Restore session"
-    echo "  Auto-save every 15 minutes"
-    echo "  Auto-restore on tmux start"
 }
 
 install_claude() {
