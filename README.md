@@ -1,7 +1,7 @@
 # tmux Session Switcher
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.2.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-2.3.0-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
   <img src="https://img.shields.io/badge/tmux-3.2+-orange.svg" alt="tmux">
   <img src="https://img.shields.io/badge/bash-4.0+-yellow.svg" alt="Bash">
@@ -65,8 +65,18 @@ cd tmux-session-switcher
 Shows a menu to choose what to install:
 1. **Full Install** - Everything included
 2. **Basic Install** - Core functionality only
-3. **Add Persistence** - tmux-resurrect/continuum
+3. **Add Persistence** - tmux-resurrect
 4. **Add Claude Hooks** - Claude Code notifications
+
+### What Gets Installed
+
+The installer configures your `~/.tmux.conf` with:
+
+- **Prefix changed to Ctrl+a** (more ergonomic than Ctrl+b)
+- **Mouse support enabled**
+- **Auto-switch to new session** when created
+- **Resize panes with Alt+arrows**
+- **All keybindings** for session management
 
 ### Requirements
 
@@ -232,9 +242,9 @@ bind-key -n M-2 run-shell "~/.local/bin/tmux-session-switcher.sh -s 1"
 
 ## Session Persistence
 
-### Automatic Save/Restore (Recommended)
+### tmux-resurrect (Recommended)
 
-The installer can set up **tmux-resurrect** and **tmux-continuum** for automatic session persistence:
+The installer can set up **tmux-resurrect** for session persistence:
 
 ```bash
 ./install.sh --resurrect
@@ -242,9 +252,8 @@ The installer can set up **tmux-resurrect** and **tmux-continuum** for automatic
 
 **What it does:**
 - Saves all sessions, windows, panes, and their contents
-- Auto-saves every 15 minutes
-- Auto-restores on tmux start
 - Preserves running programs (vim, htop, etc.)
+- Simple and lightweight (no TPM required)
 
 **Manual save/restore:**
 - `Prefix + Ctrl+s` - Save current state
@@ -592,15 +601,15 @@ echo '{"hook_event_name": "Stop", "cwd": "'$PWD'"}' | \
 ### Session persistence not working
 
 ```bash
-# Install plugins (inside tmux)
-# Press: Prefix + I
-
-# Check TPM is installed
-ls ~/.tmux/plugins/tpm
+# Check tmux-resurrect is installed
+ls ~/.tmux/plugins/tmux-resurrect
 
 # Manual save/restore
 # Prefix + Ctrl+s = Save
 # Prefix + Ctrl+r = Restore
+
+# Reinstall if needed
+./install.sh --resurrect
 ```
 
 ### No sound on notifications
@@ -642,11 +651,9 @@ See the `examples/` directory:
 └── tmux-sessionizer.conf        # Configuration
 
 ~/.tmux/plugins/
-├── tpm/                         # Plugin manager
-├── tmux-resurrect/              # Session persistence
-└── tmux-continuum/              # Auto-save
+└── tmux-resurrect/              # Session persistence (optional)
 
-~/.claude/hooks/                 # Claude Code integration
+~/.claude/hooks/                 # Claude Code integration (optional)
 ├── tmux-notification.py
 ├── claude-popup.sh
 └── notification-queue.sh
