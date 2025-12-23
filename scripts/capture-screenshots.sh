@@ -114,59 +114,5 @@ cat > "$SCREENSHOTS_DIR/window-submenu.txt" << 'EOF'
 ─────────────────────────────────────────────────────────────
 EOF
 
-# 6. Claude Notification Popup
-cat > "$SCREENSHOTS_DIR/claude-notification.txt" << 'EOF'
-╔════════════════════════════════════════════════════════════════════════╗
-║                    Claude Code Notification                            ║
-╚════════════════════════════════════════════════════════════════════════╝
-
-Type: permission_prompt
-Time: 14:32:45
-
-Session: development
-Window:  claude (#2)
-Dir:     ~/projects/my-app
-
-────────────────────────────────────────────────────────────────────────
-Message:
-Claude wants to execute: npm install lodash
-
-Do you want to allow this action?
-────────────────────────────────────────────────────────────────────────
-
-Actions:
-  [1] Go to session (switch to Claude's window)
-  [2] View full details (JSON)
-  [3] Mark as read & close
-  [q] Close without marking as read
-
-Select action (1-3, q): _
-EOF
-
-# 7. Notification Queue (Alt+x)
-cat > "$SCREENSHOTS_DIR/notification-queue.txt" << 'EOF'
-╔════════════════════════════════════════════════════════════════════════╗
-║                    Claude Code Notifications                           ║
-╚════════════════════════════════════════════════════════════════════════╝
-
-  [1] ● 14:32:45 - permission_prompt - development
-      "Claude wants to execute: npm install lodash"
-
-  [2] ● 14:28:12 - Stop - backend
-      "Task completed: Fixed authentication bug"
-
-  [3] ○ 14:15:33 - idle_prompt - frontend (read)
-      "Waiting for your input..."
-
-  [4] ○ 13:45:00 - Stop - devops (read)
-      "Deployment script finished"
-
-────────────────────────────────────────────────────────────────────────
-  ● = Unread   ○ = Read
-
-  [1-9] Select notification   [c] Clear read   [C] Clear all   [q] Quit
-────────────────────────────────────────────────────────────────────────
-EOF
-
 echo "✓ Capturas generadas en $SCREENSHOTS_DIR/"
 ls -la "$SCREENSHOTS_DIR/"

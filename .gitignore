@@ -1,9 +1,6 @@
 # Cache directories
 .cache/
 
-# Claude internal files
-.claude/
-
 # Logs
 *.log
 logs/

@@ -6,10 +6,9 @@
 #
 # Usage:
 #   ./install.sh              Interactive menu
-#   ./install.sh --full       Install everything (base + resurrect + claude)
+#   ./install.sh --full       Install everything (base + resurrect)
 #   ./install.sh --basic      Install base only (keybindings + script)
 #   ./install.sh --resurrect  Add tmux-resurrect/continuum for persistence
-#   ./install.sh --claude     Add Claude Code notification hooks
 #   ./install.sh --uninstall  Remove installation
 #
 # ═══════════════════════════════════════════════════════════════════════════
@@ -31,7 +30,6 @@ CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/tmux-sessionizer"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/tmux-sessionizer"
 LOG_DIR="$HOME/.local/share/tmux-sessionizer"
 TPM_DIR="$HOME/.tmux/plugins/tpm"
-CLAUDE_HOOKS_DIR="$HOME/.claude/hooks"
 
 SCRIPT_NAME="tmux-session-switcher.sh"
 SCRIPT_PATH="$INSTALL_DIR/$SCRIPT_NAME"
@@ -48,8 +46,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 print_header() {
     echo -e "${CYAN}${BOLD}"
     echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║       tmux Session Switcher v2.1 - Installer                 ║"
-    echo "║   Alt+Tab Style Session Management + Claude Integration      ║"
+    echo "║       tmux Session Switcher v2.3 - Installer                 ║"
+    echo "║          Alt+Tab Style Session Management                    ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo -e "${RESET}"
 }
@@ -225,89 +223,6 @@ EOF
     echo "  Prefix + Ctrl+r  = Restore session"
 }
 
-install_claude() {
-    echo -e "\n${CYAN}${BOLD}[3/4] Installing Claude Code hooks...${RESET}"
-
-    # Check python3
-    if ! command -v python3 &> /dev/null; then
-        echo -e "${RED}  ✗ python3 required for Claude hooks${RESET}"
-        echo "  Install with: sudo apt install python3"
-        return 1
-    fi
-
-    # Create hooks directory
-    mkdir -p "$CLAUDE_HOOKS_DIR"
-    mkdir -p "$HOME/.cache/claude-notifications"
-
-    # Copy hook files
-    if [ -d "$SCRIPT_DIR/claude-hooks" ]; then
-        cp "$SCRIPT_DIR/claude-hooks/tmux-notification.py" "$CLAUDE_HOOKS_DIR/"
-        cp "$SCRIPT_DIR/claude-hooks/claude-popup.sh" "$CLAUDE_HOOKS_DIR/"
-        cp "$SCRIPT_DIR/claude-hooks/notification-queue.sh" "$CLAUDE_HOOKS_DIR/"
-        chmod +x "$CLAUDE_HOOKS_DIR"/*.sh
-        echo -e "${GREEN}  ✓ Hook scripts installed to $CLAUDE_HOOKS_DIR${RESET}"
-    else
-        echo -e "${RED}  ✗ claude-hooks directory not found${RESET}"
-        return 1
-    fi
-
-    # Add notification queue keybinding
-    if ! grep -q "notification-queue" "$TMUX_CONF" 2>/dev/null; then
-        cat >> "$TMUX_CONF" << 'EOF'
-
-# ═══════════════════════════════════════════════════════════════════════════
-# Claude Code Notification Integration
-# ═══════════════════════════════════════════════════════════════════════════
-
-# Alt+x - Notification Queue (view all Claude notifications)
-bind-key -n M-x run-shell "tmux display-popup -E -w 85% -h 60% -T 'Claude Code Notifications' ~/.claude/hooks/notification-queue.sh"
-EOF
-        echo -e "${GREEN}  ✓ Notification keybinding added (Alt+x)${RESET}"
-    fi
-
-    # Create/update Claude settings
-    CLAUDE_SETTINGS="$HOME/.claude/settings.local.json"
-    if [ ! -f "$CLAUDE_SETTINGS" ]; then
-        cat > "$CLAUDE_SETTINGS" << 'EOF'
-{
-  "hooks": {
-    "Notification": [
-      {
-        "matcher": "permission_prompt|idle_prompt",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ~/.claude/hooks/tmux-notification.py"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ~/.claude/hooks/tmux-notification.py"
-          }
-        ]
-      }
-    ]
-  }
-}
-EOF
-        echo -e "${GREEN}  ✓ Claude hooks configured${RESET}"
-    else
-        echo -e "${YELLOW}  ⚠ Claude settings exist - please add hooks manually:${RESET}"
-        echo -e "${DIM}     See README.md for Claude Code hook configuration${RESET}"
-    fi
-
-    echo ""
-    echo -e "${CYAN}Claude Code Integration:${RESET}"
-    echo "  Alt+x = View notification queue"
-    echo "  Popup appears when Claude needs attention"
-    echo "  Sound alert (terminal bell) on notifications"
-}
-
 finalize() {
     echo -e "\n${CYAN}${BOLD}[4/4] Finalizing...${RESET}"
 
@@ -344,13 +259,6 @@ print_success() {
         echo ""
     fi
 
-    if [ "$INSTALL_CLAUDE" = true ]; then
-        echo -e "  ${BOLD}Claude Code:${RESET}"
-        echo "    Alt+x     View notification queue"
-        echo "    Popup appears when Claude needs attention"
-        echo ""
-    fi
-
     echo -e "  ${BOLD}Documentation:${RESET}"
     echo "    README.md      Full documentation"
     echo "    CHEATSHEET.md  Quick reference"
@@ -371,8 +279,6 @@ uninstall() {
     echo "  - Configuration ($CONFIG_DIR)"
     echo "  - Cache files ($CACHE_DIR)"
     echo "  - Log files ($LOG_DIR)"
-    echo "  - Claude Code hooks ($CLAUDE_HOOKS_DIR)"
-    echo "  - Claude notifications cache"
     echo "  - Keybindings from ~/.tmux.conf"
     echo ""
 
@@ -384,7 +290,7 @@ uninstall() {
     fi
 
     echo ""
-    echo -e "${CYAN}[1/6] Removing main script...${RESET}"
+    echo -e "${CYAN}[1/5] Removing main script...${RESET}"
     if [ -f "$SCRIPT_PATH" ]; then
         rm "$SCRIPT_PATH"
         echo -e "${GREEN}  ✓ Removed $SCRIPT_PATH${RESET}"
@@ -392,7 +298,7 @@ uninstall() {
         echo -e "${DIM}  - Script not found (already removed)${RESET}"
     fi
 
-    echo -e "${CYAN}[2/6] Removing configuration...${RESET}"
+    echo -e "${CYAN}[2/5] Removing configuration...${RESET}"
     if [ -d "$CONFIG_DIR" ]; then
         rm -rf "$CONFIG_DIR"
         echo -e "${GREEN}  ✓ Removed $CONFIG_DIR${RESET}"
@@ -400,7 +306,7 @@ uninstall() {
         echo -e "${DIM}  - Config directory not found${RESET}"
     fi
 
-    echo -e "${CYAN}[3/6] Removing cache and logs...${RESET}"
+    echo -e "${CYAN}[3/5] Removing cache and logs...${RESET}"
     if [ -d "$CACHE_DIR" ]; then
         rm -rf "$CACHE_DIR"
         echo -e "${GREEN}  ✓ Removed $CACHE_DIR${RESET}"
@@ -410,34 +316,7 @@ uninstall() {
         echo -e "${GREEN}  ✓ Removed $LOG_DIR${RESET}"
     fi
 
-    echo -e "${CYAN}[4/6] Removing Claude Code hooks...${RESET}"
-    if [ -d "$CLAUDE_HOOKS_DIR" ]; then
-        # Only remove our files, not the whole directory
-        [ -f "$CLAUDE_HOOKS_DIR/tmux-notification.py" ] && rm "$CLAUDE_HOOKS_DIR/tmux-notification.py"
-        [ -f "$CLAUDE_HOOKS_DIR/claude-popup.sh" ] && rm "$CLAUDE_HOOKS_DIR/claude-popup.sh"
-        [ -f "$CLAUDE_HOOKS_DIR/notification-queue.sh" ] && rm "$CLAUDE_HOOKS_DIR/notification-queue.sh"
-        echo -e "${GREEN}  ✓ Removed Claude hook scripts${RESET}"
-
-        # Remove deprecated folder if exists
-        [ -d "$CLAUDE_HOOKS_DIR/deprecated" ] && rm -rf "$CLAUDE_HOOKS_DIR/deprecated"
-
-        # Remove directory if empty
-        if [ -d "$CLAUDE_HOOKS_DIR" ] && [ -z "$(ls -A "$CLAUDE_HOOKS_DIR" 2>/dev/null)" ]; then
-            rmdir "$CLAUDE_HOOKS_DIR"
-            echo -e "${GREEN}  ✓ Removed empty $CLAUDE_HOOKS_DIR${RESET}"
-        fi
-    else
-        echo -e "${DIM}  - Claude hooks not found${RESET}"
-    fi
-
-    # Remove Claude notifications cache
-    CLAUDE_CACHE="$HOME/.cache/claude-notifications"
-    if [ -d "$CLAUDE_CACHE" ]; then
-        rm -rf "$CLAUDE_CACHE"
-        echo -e "${GREEN}  ✓ Removed $CLAUDE_CACHE${RESET}"
-    fi
-
-    echo -e "${CYAN}[5/6] Cleaning tmux.conf...${RESET}"
+    echo -e "${CYAN}[4/5] Cleaning tmux.conf...${RESET}"
     if [ -f "$TMUX_CONF" ]; then
         # Create backup
         BACKUP="$TMUX_CONF.backup.$(date +%Y%m%d_%H%M%S)"
@@ -456,10 +335,6 @@ uninstall() {
         sed -i '/@resurrect/d' "$TMUX_CONF" 2>/dev/null || true
         sed -i '/@continuum/d' "$TMUX_CONF" 2>/dev/null || true
 
-        # Remove Claude Code section
-        sed -i '/# ═.*Claude Code/,/^# ═\|^$/{ /^# ═[^C]/!d; }' "$TMUX_CONF" 2>/dev/null || true
-        sed -i '/notification-queue/d' "$TMUX_CONF" 2>/dev/null || true
-
         # Remove tmux-session-switcher related lines
         sed -i '/tmux-session-switcher/d' "$TMUX_CONF" 2>/dev/null || true
 
@@ -475,7 +350,7 @@ uninstall() {
         echo -e "${DIM}  - tmux.conf not found${RESET}"
     fi
 
-    echo -e "${CYAN}[6/6] Optional cleanup...${RESET}"
+    echo -e "${CYAN}[5/5] Optional cleanup...${RESET}"
     echo ""
     read -p "  Remove TPM and plugins (~/.tmux/plugins)? [y/N] " -n 1 -r
     echo ""
@@ -508,7 +383,6 @@ uninstall() {
     echo -e "${CYAN}Removed:${RESET}"
     echo "  - tmux-session-switcher script"
     echo "  - Configuration and cache"
-    echo "  - Claude Code hooks"
     echo "  - Keybindings from tmux.conf"
     echo ""
     echo -e "${YELLOW}Note:${RESET} A backup of your tmux.conf was created."
@@ -523,7 +397,7 @@ show_menu() {
     echo -e "${BOLD}Select installation type:${RESET}"
     echo ""
     echo "  [1] ${BOLD}Full Install${RESET} (Recommended)"
-    echo "      Base + Session Persistence + Claude Code hooks"
+    echo "      Base + Session Persistence"
     echo ""
     echo "  [2] ${BOLD}Basic Install${RESET}"
     echo "      Core functionality only (keybindings + script)"
@@ -531,30 +405,24 @@ show_menu() {
     echo "  [3] ${BOLD}Add Session Persistence${RESET}"
     echo "      tmux-resurrect + tmux-continuum"
     echo ""
-    echo "  [4] ${BOLD}Add Claude Code Hooks${RESET}"
-    echo "      Notification integration for Claude Code"
-    echo ""
-    echo "  [5] ${BOLD}Uninstall${RESET}"
+    echo "  [4] ${BOLD}Uninstall${RESET}"
     echo ""
     echo "  [q] Quit"
     echo ""
 
-    read -p "Select option [1-5, q]: " -n 1 -r
+    read -p "Select option [1-4, q]: " -n 1 -r
     echo ""
 
     case $REPLY in
         1)
             INSTALL_RESURRECT=true
-            INSTALL_CLAUDE=true
             install_base
             install_resurrect
-            install_claude
             finalize
             print_success
             ;;
         2)
             INSTALL_RESURRECT=false
-            INSTALL_CLAUDE=false
             install_base
             finalize
             print_success
@@ -566,12 +434,6 @@ show_menu() {
             echo -e "${GREEN}Session persistence installed!${RESET}"
             ;;
         4)
-            INSTALL_CLAUDE=true
-            install_claude
-            finalize
-            echo -e "${GREEN}Claude Code hooks installed!${RESET}"
-            ;;
-        5)
             uninstall
             ;;
         q|Q)
@@ -594,10 +456,8 @@ case "${1:-}" in
         print_header
         check_requirements
         INSTALL_RESURRECT=true
-        INSTALL_CLAUDE=true
         install_base
         install_resurrect
-        install_claude
         finalize
         print_success
         ;;
@@ -605,7 +465,6 @@ case "${1:-}" in
         print_header
         check_requirements
         INSTALL_RESURRECT=false
-        INSTALL_CLAUDE=false
         install_base
         finalize
         print_success
@@ -616,12 +475,6 @@ case "${1:-}" in
         install_resurrect
         finalize
         echo -e "${GREEN}Session persistence installed!${RESET}"
-        ;;
-    --claude)
-        INSTALL_CLAUDE=true
-        install_claude
-        finalize
-        echo -e "${GREEN}Claude Code hooks installed!${RESET}"
         ;;
     --uninstall)
         uninstall
@@ -636,7 +489,6 @@ case "${1:-}" in
         echo "  --full        Install everything"
         echo "  --basic       Install base only"
         echo "  --resurrect   Add session persistence"
-        echo "  --claude      Add Claude Code hooks"
         echo "  --uninstall   Remove installation"
         echo "  --help        Show this help"
         ;;

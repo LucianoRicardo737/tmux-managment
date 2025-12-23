@@ -41,7 +41,6 @@
 - **Directory Search** - Find projects and create sessions
 - **Session Persistence** - Auto-save/restore with tmux-resurrect
 - **Hydration Scripts** - Auto-setup windows per project
-- **Claude Code Integration** - Notifications when AI needs attention
 
 ---
 
@@ -50,7 +49,7 @@
 ### One Command Install
 
 ```bash
-# Clone and install everything (base + persistence + Claude hooks)
+# Clone and install everything (base + persistence)
 git clone https://github.com/yourusername/tmux-session-switcher.git
 cd tmux-session-switcher
 ./install.sh --full
@@ -66,7 +65,6 @@ Shows a menu to choose what to install:
 1. **Full Install** - Everything included
 2. **Basic Install** - Core functionality only
 3. **Add Persistence** - tmux-resurrect
-4. **Add Claude Hooks** - Claude Code notifications
 
 ### What Gets Installed
 
@@ -84,7 +82,6 @@ The installer configures your `~/.tmux.conf` with:
 - **bash** >= 4.0
 - **git** (for tmux-resurrect)
 - **fzf** (optional, for fuzzy search)
-- **python3** (optional, for Claude hooks)
 
 ```bash
 # Ubuntu/Debian
@@ -111,7 +108,6 @@ sudo pacman -S tmux git fzf
 | `Alt+d` | Search | Directory Search | Find projects, create sessions |
 | `Alt+n` | Cycle | Next Session | Switch to next session |
 | `Alt+p` | Cycle | Previous Session | Switch to previous session |
-| `Alt+x` | Claude | Notification Queue | View Claude notifications |
 | `Prefix+Space` | Hierarchical | Hierarchical (Alt) | Alternative if Alt doesn't work |
 | `Prefix+a` | Manager | Manager (Alt) | Alternative if Alt doesn't work |
 | `Prefix+Ctrl+s` | Persist | Save Session | Manual session save |
@@ -389,99 +385,6 @@ Si una sesión tiene solo 1 ventana real, no se muestra la lista de ventanas.
 
 ---
 
-## Claude Code Integration
-
-Real-time notifications when [Claude Code](https://claude.ai/code) needs your attention.
-
-### Installation
-
-```bash
-./install.sh --claude
-```
-
-Or add to existing installation:
-```bash
-./install.sh
-# Select option [4] Add Claude Code Hooks
-```
-
-### How It Works
-
-When working with Claude Code in one tmux session while doing other work:
-
-1. **Claude needs permission** → Popup appears + sound alert
-2. **Claude is waiting** → Popup appears + sound alert
-3. **Task completed** → Popup appears + sound alert
-
-You can:
-- Press `1` to jump directly to Claude's session
-- Press `2` to view full notification details
-- Press `3` to mark as read and close
-- Press `Alt+x` anytime to view notification queue
-
-### Notification Popup
-
-```
-╔════════════════════════════════════════════════════════════════════════╗
-║                    Claude Code Notification                            ║
-╚════════════════════════════════════════════════════════════════════════╝
-
-Type: permission_prompt
-Time: 14:32:45
-
-Session: development
-Window:  claude (#2)
-Dir:     ~/projects/my-app
-
-────────────────────────────────────────────────────────────────────────
-Message:
-Claude wants to execute: npm install lodash
-────────────────────────────────────────────────────────────────────────
-
-Actions:
-  [1] Go to session (switch to Claude's window)
-  [2] View full details (JSON)
-  [3] Mark as read & close
-  [q] Close without marking as read
-
-Select action (1-3, q): _
-```
-
-### Notification Queue (Alt+x)
-
-```
-╔════════════════════════════════════════════════════════════════════════╗
-║                    Claude Code Notifications                           ║
-╚════════════════════════════════════════════════════════════════════════╝
-
-  [1] ● 14:32:45 - permission_prompt - development
-      "Claude wants to execute: npm install lodash"
-
-  [2] ● 14:28:12 - Stop - backend
-      "Task completed: Fixed authentication bug"
-
-  [3] ○ 14:15:33 - idle_prompt - frontend (read)
-      "Waiting for your input..."
-
-────────────────────────────────────────────────────────────────────────
-  ● = Unread   ○ = Read
-
-  [1-9] Select notification   [c] Clear read   [C] Clear all   [q] Quit
-────────────────────────────────────────────────────────────────────────
-```
-
-### Notification Types
-
-| Type | Trigger | Description |
-|------|---------|-------------|
-| `permission_prompt` | Claude needs approval | Command execution permission |
-| `idle_prompt` | Claude waiting | Waiting for user input |
-| `elicitation_dialog` | MCP tool input | Tool requires information |
-| `error` | Error occurred | Something went wrong |
-| `Stop` | Task finished | Work completed |
-
----
-
 ## Configuration
 
 ### Main Config File
@@ -584,20 +487,6 @@ bind-key Space run-shell "~/.local/bin/tmux-session-switcher.sh popup"
 # Then use: Ctrl+b a  or  Ctrl+b Space
 ```
 
-### Claude notifications not working
-
-```bash
-# Check hook logs
-cat ~/.cache/claude-notifications/hook-debug.log
-
-# Verify hook configuration
-cat ~/.claude/settings.local.json
-
-# Test manually
-echo '{"hook_event_name": "Stop", "cwd": "'$PWD'"}' | \
-  python3 ~/.claude/hooks/tmux-notification.py
-```
-
 ### Session persistence not working
 
 ```bash
@@ -611,16 +500,6 @@ ls ~/.tmux/plugins/tmux-resurrect
 # Reinstall if needed
 ./install.sh --resurrect
 ```
-
-### No sound on notifications
-
-Enable terminal bell in your terminal:
-
-- **GNOME Terminal**: Preferences → Profile → Text → Terminal bell
-- **Konsole**: Settings → Profile → Terminal Features → System bell
-- **iTerm2**: Preferences → Profiles → Terminal → Bell
-
-Test: `printf '\a'`
 
 ---
 
@@ -653,14 +532,7 @@ See the `examples/` directory:
 ~/.tmux/plugins/
 └── tmux-resurrect/              # Session persistence (optional)
 
-~/.claude/hooks/                 # Claude Code integration (optional)
-├── tmux-notification.py
-├── claude-popup.sh
-└── notification-queue.sh
-
-~/.cache/
-├── tmux-sessionizer/            # Session cache
-└── claude-notifications/        # Notification cache
+~/.cache/tmux-sessionizer/       # Session cache
 ```
 
 ---

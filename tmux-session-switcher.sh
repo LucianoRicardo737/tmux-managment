@@ -972,7 +972,7 @@ create_menu_binding() {
     cmd+=" '═══ ACCIONES ═══' '' ''"
     cmd+=" '+ Nueva sesión' 'n' 'command-prompt -p \"Nombre:\" \"new-session -ds \\\"%%\\\"; switch-client -t \\\"%%\\\"\"'"
     cmd+=" '⎘ Renombrar' 'r' 'command-prompt -I \"#S\" -p \"Nuevo nombre:\" \"rename-session \\\"%%\\\"\"'"
-    cmd+=" '🔍 Buscar dirs' 'd' 'run-shell \"${SCRIPT_PATH} search\"'"
+    cmd+=" 'Buscar dirs' 'd' 'run-shell \"${SCRIPT_PATH} search\"'"
 
     # Execute tmux bind-key directly - need eval to handle quotes properly
     eval "tmux bind-key -n M-m $cmd"
@@ -1068,7 +1068,7 @@ switch_with_menu_v2() {
     menu_items+=("═══ ACCIONES ═══" "" "")
     menu_items+=("+ Nueva sesión" "n" "command-prompt -p 'Nombre:' 'new-session -ds \"%%\"; switch-client -t \"%%\"'")
     menu_items+=("⎘ Renombrar sesión" "r" "command-prompt -I '#S' -p 'Nuevo nombre:' 'rename-session \"%%\"'")
-    menu_items+=("🔍 Buscar directorios" "d" "run-shell '${SCRIPT_PATH} __search__'")
+    menu_items+=("Buscar directorios" "d" "run-shell '${SCRIPT_PATH} __search__'")
     menu_items+=("↻ Recargar" "l" "run-shell '${SCRIPT_PATH} __menu__'")
 
     # Display menu
@@ -1133,7 +1133,7 @@ show_window_menu() {
     menu+="'← Volver' 'q' 'run-shell \"${SCRIPT_PATH} __menu__\"' "
 
     # Display menu
-    eval "tmux display-menu -T '📁 ${session}' -x C -y C ${menu}"
+    eval "tmux display-menu -T '${session}' -x C -y C ${menu}"
 }
 
 # Argument parsing
