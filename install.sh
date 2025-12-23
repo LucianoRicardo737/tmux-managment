@@ -9,6 +9,7 @@
 #   ./install.sh --full       Install everything (base + resurrect)
 #   ./install.sh --basic      Install base only (keybindings + script)
 #   ./install.sh --resurrect  Add tmux-resurrect/continuum for persistence
+#   ./install.sh --force      Force reinstall (clean + full install)
 #   ./install.sh --uninstall  Remove installation
 #
 # ═══════════════════════════════════════════════════════════════════════════
@@ -92,6 +93,25 @@ backup_config() {
     fi
 }
 
+# Silent cleanup for --force reinstall
+clean_silent() {
+    # Remove script
+    [ -f "$SCRIPT_PATH" ] && rm -f "$SCRIPT_PATH"
+
+    # Remove directories
+    [ -d "$CONFIG_DIR" ] && rm -rf "$CONFIG_DIR"
+    [ -d "$CACHE_DIR" ] && rm -rf "$CACHE_DIR"
+    [ -d "$LOG_DIR" ] && rm -rf "$LOG_DIR"
+
+    # Clean tmux.conf
+    if [ -f "$TMUX_CONF" ]; then
+        sed -i '/# >>> tmux-session-switcher START >>>/,/# <<< tmux-session-switcher END <<</d' "$TMUX_CONF" 2>/dev/null || true
+        sed -i '/# ═.*tmux Session Switcher/,/^bind-key a run-shell.*manager/d' "$TMUX_CONF" 2>/dev/null || true
+        sed -i '/tmux-resurrect/d' "$TMUX_CONF" 2>/dev/null || true
+        sed -i '/^$/N;/^\n$/d' "$TMUX_CONF" 2>/dev/null || true
+    fi
+}
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Installation Functions
 # ═══════════════════════════════════════════════════════════════════════════
@@ -123,14 +143,14 @@ install_base() {
     fi
 
     # Add to tmux.conf if not present
-    if ! grep -q "tmux-session-switcher" "$TMUX_CONF" 2>/dev/null; then
+    if ! grep -q ">>> tmux-session-switcher START >>>" "$TMUX_CONF" 2>/dev/null; then
         backup_config
         cat >> "$TMUX_CONF" << EOF
 
-# ═══════════════════════════════════════════════════════════════════════════
-# tmux Session Switcher v2.1
+# >>> tmux-session-switcher START >>>
+# tmux Session Switcher v2.3
 # Added on $(date)
-# ═══════════════════════════════════════════════════════════════════════════
+# DO NOT EDIT - This block is managed by install.sh
 
 # Change prefix to Ctrl+a
 unbind C-b
@@ -168,6 +188,7 @@ bind-key -n M-p run-shell "$SCRIPT_PATH prev"
 # Prefix alternatives (if Alt doesn't work)
 bind-key Space run-shell "tmux neww $SCRIPT_PATH hierarchical"
 bind-key a run-shell "$SCRIPT_PATH manager"
+# <<< tmux-session-switcher END <<<
 EOF
         echo -e "${GREEN}  ✓ Keybindings added to $TMUX_CONF${RESET}"
     else
@@ -323,24 +344,14 @@ uninstall() {
         cp "$TMUX_CONF" "$BACKUP"
         echo -e "${DIM}  Backed up to $BACKUP${RESET}"
 
-        # Remove our sections using sed
-        # Remove Session Switcher section
-        sed -i '/# ═.*tmux Session Switcher/,/^# ═.*[^S]/{ /^# ═.*[^S]/!d; }' "$TMUX_CONF" 2>/dev/null || true
-        sed -i '/# ═.*tmux Session Switcher/d' "$TMUX_CONF" 2>/dev/null || true
+        # Remove our section using clear markers (new format)
+        sed -i '/# >>> tmux-session-switcher START >>>/,/# <<< tmux-session-switcher END <<</d' "$TMUX_CONF" 2>/dev/null || true
 
-        # Remove Session Persistence section
-        sed -i '/# ═.*Session Persistence/,/^# ═\|^$/{ /^# ═[^S]/!d; }' "$TMUX_CONF" 2>/dev/null || true
+        # Also remove old format for backwards compatibility
+        sed -i '/# ═.*tmux Session Switcher/,/^bind-key a run-shell.*manager/d' "$TMUX_CONF" 2>/dev/null || true
+
+        # Remove tmux-resurrect lines
         sed -i '/tmux-resurrect/d' "$TMUX_CONF" 2>/dev/null || true
-        sed -i '/tmux-continuum/d' "$TMUX_CONF" 2>/dev/null || true
-        sed -i '/@resurrect/d' "$TMUX_CONF" 2>/dev/null || true
-        sed -i '/@continuum/d' "$TMUX_CONF" 2>/dev/null || true
-
-        # Remove tmux-session-switcher related lines
-        sed -i '/tmux-session-switcher/d' "$TMUX_CONF" 2>/dev/null || true
-
-        # Remove TPM lines (only if we added them)
-        sed -i "/@plugin 'tmux-plugins\/tpm'/d" "$TMUX_CONF" 2>/dev/null || true
-        sed -i '/run.*\.tmux\/plugins\/tpm\/tpm/d' "$TMUX_CONF" 2>/dev/null || true
 
         # Clean up multiple empty lines
         sed -i '/^$/N;/^\n$/d' "$TMUX_CONF" 2>/dev/null || true
@@ -479,6 +490,19 @@ case "${1:-}" in
     --uninstall)
         uninstall
         ;;
+    --force)
+        print_header
+        echo -e "${YELLOW}Force reinstalling...${RESET}"
+        echo -e "${DIM}Cleaning previous installation...${RESET}"
+        clean_silent
+        echo -e "${GREEN}  ✓ Cleaned${RESET}"
+        check_requirements
+        INSTALL_RESURRECT=true
+        install_base
+        install_resurrect
+        finalize
+        print_success
+        ;;
     --help|-h)
         echo "tmux Session Switcher Installer"
         echo ""
@@ -489,6 +513,7 @@ case "${1:-}" in
         echo "  --full        Install everything"
         echo "  --basic       Install base only"
         echo "  --resurrect   Add session persistence"
+        echo "  --force       Force reinstall (clean + full install)"
         echo "  --uninstall   Remove installation"
         echo "  --help        Show this help"
         ;;
