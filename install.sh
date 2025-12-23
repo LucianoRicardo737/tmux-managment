@@ -407,18 +407,18 @@ show_menu() {
 
     echo -e "${BOLD}Select installation type:${RESET}"
     echo ""
-    echo "  [1] ${BOLD}Full Install${RESET} (Recommended)"
+    echo -e "  [1] ${BOLD}Full Install${RESET} (Recommended)"
     echo "      Base + Session Persistence"
     echo ""
-    echo "  [2] ${BOLD}Basic Install${RESET}"
+    echo -e "  [2] ${BOLD}Basic Install${RESET}"
     echo "      Core functionality only (keybindings + script)"
     echo ""
-    echo "  [3] ${BOLD}Add Session Persistence${RESET}"
+    echo -e "  [3] ${BOLD}Add Session Persistence${RESET}"
     echo "      tmux-resurrect + tmux-continuum"
     echo ""
-    echo "  [4] ${BOLD}Uninstall${RESET}"
+    echo -e "  [4] ${BOLD}Uninstall${RESET}"
     echo ""
-    echo "  [q] Quit"
+    echo -e "  [q] Quit"
     echo ""
 
     read -p "Select option [1-4, q]: " -n 1 -r
