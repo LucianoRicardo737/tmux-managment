@@ -65,6 +65,14 @@ Shows a menu to choose what to install:
 1. **Full Install** - Everything included
 2. **Basic Install** - Core functionality only
 3. **Add Persistence** - tmux-resurrect
+4. **Uninstall** - Remove installation
+
+### Other Install Options
+
+```bash
+./install.sh --force      # Force reinstall (clean + full install)
+./install.sh --uninstall  # Remove everything
+```
 
 ### What Gets Installed
 
