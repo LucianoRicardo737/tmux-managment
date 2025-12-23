@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <strong>Alt+Tab style session switching for tmux with hierarchical navigation, session persistence, and Claude Code integration.</strong>
+  <strong>Alt+Tab style session switching for tmux with hierarchical navigation and session persistence.</strong>
 </p>
 
 ```
@@ -559,7 +559,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 - Inspired by [tmux-sessionizer](https://github.com/ThePrimeagen/.dotfiles) by ThePrimeagen
 - Session persistence via [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect)
 - Fuzzy finding via [fzf](https://github.com/junegunn/fzf)
-- AI integration for [Anthropic's Claude](https://claude.ai)
 
 ---
 
